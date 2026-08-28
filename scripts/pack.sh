@@ -8,7 +8,7 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SKILLS_ROOT="$REPO/plugins/personal-protocols/skills"
+SKILLS_ROOT="$REPO/plugins/doc-protocols/skills"
 DIST="$REPO/dist"
 
 [ -d "$SKILLS_ROOT" ] || { echo "오류: $SKILLS_ROOT 가 없다." >&2; exit 1; }

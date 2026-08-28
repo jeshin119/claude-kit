@@ -1,0 +1,11 @@
+{
+  "name": "doc-protocols",
+  "displayName": "Doc Protocols",
+  "description": "코드 설명과 프로젝트 문서화 절차 묶음. 한국어 출력 전용.",
+  "version": "0.1.0",
+  "author": {
+    "name": "jeshin",
+    "email": "jsshin0201@gmail.com"
+  },
+  "license": "MIT"
+}

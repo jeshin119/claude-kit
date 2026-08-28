@@ -32,7 +32,7 @@ Claude Code (WSL, 이후 Docker)   dist/*.skill -> claude.ai 업로드
 ```
 claude-kit/
 ├── .claude-plugin/marketplace.json      마켓플레이스 정의 (이름: claude-kit)
-├── plugins/personal-protocols/
+├── plugins/doc-protocols/
 │   ├── .claude-plugin/plugin.json       플러그인 정의
 │   ├── commands/                        /doc-init, /doc-log
 │   ├── hooks/hooks.json                 Stop 훅 (journal 갱신 상기)
@@ -63,7 +63,7 @@ cd ~/claude-kit
 
 ```
 /plugin marketplace add ~/claude-kit
-/plugin install personal-protocols@claude-kit
+/plugin install doc-protocols@claude-kit
 ```
 
 계정 쪽은 `./scripts/pack.sh` 실행 후 `dist/*.skill`을
@@ -76,40 +76,28 @@ claude.ai → Settings → Capabilities 에 업로드한다.
 | 표면 | 갱신 방법 |
 |---|---|
 | Claude Code (WSL) | `/plugin marketplace update claude-kit` |
+| 다른 머신 · 백업 | `git commit && git push`. 반영 조건은 아니지만 안 하면 잃는다 |
 | claude.ai 계정 | `./scripts/pack.sh <스킬명>` 후 해당 `.skill` 재업로드 |
 
 ## 언어 정책
 
-**스킬 본문의 언어는 그 스킬의 출력 언어를 따른다.**
+스킬 본문의 언어는 그 스킬의 출력 언어를 따른다. 한국어를 만들어내는 스킬은
+본문과 `description`까지 한국어로 쓴다. 본문이 영어면 생성 시점에 번역 단계가
+끼어들고, 거기서 번역투가 샌다.
 
-- 한국어 설명·문서·대화를 만들어내는 스킬 → 본문까지 한국어로 쓴다.
-- 코드·셸 명령·영문 산출물을 만드는 스킬 → 영어로 써도 된다.
+`description` 안의 한국어 트리거 문구(`"이 코드 설명해줘"`, `"이해가 안 돼"`)와
+네거티브 트리거 문구(`"~에는 트리거하지 않는다"`)는 지우지 않는다. 발동 판단이
+거기서 나오고, 네거티브 문구가 빠지면 구현 요청에 설명 스킬이 잘못 발동한다.
 
-한국어 스킬을 영어로 번역하지 않는다. 본문이 한국어여야 출력도 자연스럽다.
-본문이 영어면 생성 시점에 번역 단계가 끼어들고, 거기서 번역투가 샌다. 영어가
-지시 준수에서 얻는 이득은 그 손실을 상쇄할 만큼 크지 않다.
+## 서드파티 플러그인을 넣지 않는 이유
 
-`description`에도 같은 규칙을 적용한다. 실제로 쓰는 한국어 트리거 문구
-(`"이 코드 설명해줘"`, `"이해가 안 돼"`)를 그대로 둔다. 그게 요청을 실제로 어떻게
-말하는지에 대한 구체적 예시이고, 발동 판단은 거기서 나온다.
+`humanize-korean`, `frontend-design`, `andrej-karpathy-skills`는 각자의
+마켓플레이스에 그대로 둔다. fork 하거나 복사해오면 상류 업데이트가 끊긴다.
+새 환경에서는 `scripts/bootstrap.sh`가 등록만 복원한다.
 
-**네거티브 트리거 문구("~에는 트리거하지 않는다")는 전부 보존한다.** 구현 요청에
-스킬이 잘못 발동하는 것을 막는 문장이고, 파일에서 가치가 가장 높은 줄이다.
-
-## 이 저장소에 일부러 넣지 않은 것
-
-| 대상 | 넣지 않은 이유 |
-|---|---|
-| `humanize-korean@im-not-ai` | 서드파티. 각자 마켓플레이스에 두어야 업데이트를 계속 받는다. fork·vendor 하지 않는다. `bootstrap.sh`가 등록만 복원한다. |
-| `frontend-design@claude-plugins-official` | 위와 같음. 공식 마켓플레이스 저장소 내부 경로(`./plugins/frontend-design`)를 source로 쓰므로 외부에서 참조하면 상류 구조 변경에 깨진다. |
-| `andrej-karpathy-skills@karpathy-skills` | 위와 같음. |
-| Anthropic 기본 제공 스킬 (`docx`, `xlsx`, `pptx`, `pdf`, `dataviz`, `artifact-*` 등) | Claude가 직접 제공한다. 건드리지 않는다. |
-| `project-instruction-optimizer` | 소유자가 비활성화했다. `~/.claude/skills/`에 존재하지 않으므로 마이그레이션 대상이 아니다. |
-
-마켓플레이스를 서드파티까지 묶는 "통합 등록소"로 만들지 않은 이유는, 상류가
-새 플러그인을 추가해도 이 목록에 손으로 적기 전까지 보이지 않고, 이 저장소의
-JSON 하나가 깨지면 개인 스킬까지 함께 사라지는 단일 실패점이 생기기 때문이다.
-새 환경 부트스트랩의 편의는 `scripts/bootstrap.sh`로 따로 확보했다.
+서드파티까지 묶는 "통합 등록소"로도 만들지 않는다. 상류가 새 플러그인을 추가해도
+이 목록에 손으로 적기 전까지 보이지 않고, 이 저장소의 JSON 하나가 깨지면 개인
+스킬까지 함께 사라지는 단일 실패점이 생긴다.
 
 ## 스킬 목록
 

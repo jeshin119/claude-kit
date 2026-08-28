@@ -10,9 +10,9 @@
   },
   "plugins": [
     {
-      "name": "personal-protocols",
-      "source": "./plugins/personal-protocols",
-      "description": "코드 설명과 프로젝트 문서화를 위한 개인 프로토콜 스킬 묶음. 한국어 출력 전용.",
+      "name": "doc-protocols",
+      "source": "./plugins/doc-protocols",
+      "description": "코드 설명과 프로젝트 문서화 절차 묶음. 한국어 출력 전용.",
       "version": "0.1.0",
       "keywords": [
         "korean",
