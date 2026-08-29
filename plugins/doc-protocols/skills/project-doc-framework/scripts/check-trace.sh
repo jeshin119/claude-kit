@@ -73,10 +73,72 @@ else
     "$(only "$def_fr" "$(printf '%s\n' "$use_journal" | grep -oE 'FR-[0-9]+' | sort -u)")"
 fi
 
+# 프로파일은 파일 존재로 판정한다. charter 헤더를 파싱하지 않는 이유는
+# 템플릿 플레이스홀더("S / M / L")가 안 채워진 채로 남아도 알 수 없기 때문이다.
+profile() {
+  [ -f "$DESIGN" ] || { echo S; return; }
+  [ -f "$REPORT" ] || { echo M; return; }
+  echo L
+}
+
+# 문서에 적힌 날짜 중 가장 오래된 것. 템플릿 플레이스홀더는 안 잡힌다.
+first_date() {
+  { [ -f "$CHARTER" ] && cat "$CHARTER"
+    [ -f "$JOURNAL" ] && cat "$JOURNAL"
+    for f in "${ARCHIVES[@]}"; do [ -f "$f" ] && cat "$f"; done
+  } 2>/dev/null | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | sort | head -1
+}
+
+# git 추적 파일 수. 문서 디렉터리는 뺀다. 문서가 스스로 승급 신호를 만들면 안 된다.
+tracked_count() {
+  local root docs_abs prefix
+  root=$(git -C "$DOCS" rev-parse --show-toplevel 2>/dev/null) || return 1
+  docs_abs=$(cd "$DOCS" && pwd) || return 1
+  if [ "$docs_abs" = "$root" ]; then
+    git -C "$root" ls-files | grep -c ''
+  else
+    prefix=${docs_abs#"$root"/}
+    git -C "$root" ls-files | grep -vc "^${prefix}/"
+  fi
+}
+
+echo "== 프로파일 승급 =="
+prof=$(profile)
+start=$(first_date)
+days=""
+if [ -n "$start" ]; then
+  s_epoch=$(date -d "$start" +%s 2>/dev/null) && days=$(( ( $(date +%s) - s_epoch ) / 86400 ))
+fi
+files=$(tracked_count) || files=""
+
+echo "  현재: $prof (문서 파일 기준)${start:+ · 시작 $start${days:+, ${days}일 경과}}${files:+ · 추적 파일 ${files}개}"
+
+signals=""
+case "$prof" in
+  S)
+    [ -n "$files" ] && [ "$files" -gt 5 ] && signals="${signals}    - 추적 파일이 ${files}개다 (기준 5개 초과)"$'\n'
+    [ -n "$days" ] && [ "$days" -ge 2 ] && signals="${signals}    - ${days}일 걸렸다 (기준 이틀 이상)"$'\n'
+    [ -d "$DOCS/decisions" ] && signals="${signals}    - decisions/ 가 이미 있다"$'\n'
+    next=M ;;
+  M)
+    [ -n "$days" ] && [ "$days" -ge 30 ] && signals="${signals}    - ${days}일 걸렸다 (기준 한 달 초과)"$'\n'
+    next=L ;;
+  *) next="" ;;
+esac
+
+if [ -n "$signals" ]; then
+  fail=1
+  echo "  $next 승급 조건에 걸렸다:"
+  printf '%s' "$signals"
+  echo "    (기계가 못 재는 신호: 결정을 뒤집었나 / 남이 손대나 / 배포 대상이 있나)"
+elif [ -n "$next" ]; then
+  echo "  $next 승급 신호 없음."
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "끊긴 사슬 없음."
 else
-  echo "위 항목을 채우거나, 채우지 않는 이유를 보고에 적는다."
+  echo "위 항목을 채우거나 승급하고, 하지 않는다면 그 이유를 보고에 적는다."
 fi
 exit "$fail"
