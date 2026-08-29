@@ -35,7 +35,9 @@ claude-kit/
 ├── plugins/doc-protocols/
 │   ├── .claude-plugin/plugin.json       플러그인 정의
 │   ├── commands/                        /doc-init, /doc-log
-│   ├── hooks/hooks.json                 Stop 훅 (journal 갱신 상기)
+│   ├── hooks/
+│   │   ├── hooks.json                   Stop 훅 등록
+│   │   └── journal_reminder.py          발동 조건 넷을 판단하는 본체
 │   └── skills/
 │       ├── code-explain-protocol/SKILL.md
 │       └── project-doc-framework/
@@ -53,7 +55,7 @@ claude-kit/
 ## 최초 설치
 
 ```bash
-git clone <이 저장소> ~/claude-kit
+git clone git@github.com:jeshin119/claude-kit.git ~/claude-kit
 cd ~/claude-kit
 ./scripts/link.sh          # ~/.claude/CLAUDE.md 심링크
 ./scripts/bootstrap.sh     # 서드파티 플러그인 3개 복원 (새 환경에서만)
@@ -76,8 +78,25 @@ claude.ai → Settings → Capabilities 에 업로드한다.
 | 표면 | 갱신 방법 |
 |---|---|
 | Claude Code (WSL) | `/plugin marketplace update claude-kit` |
+| 이름을 바꿨을 때 | `update` 만으로는 안 된다. 아래를 본다 |
 | 다른 머신 · 백업 | `git commit && git push`. 반영 조건은 아니지만 안 하면 잃는다 |
 | claude.ai 계정 | `./scripts/pack.sh <스킬명>` 후 해당 `.skill` 재업로드 |
+
+### 플러그인이나 스킬 이름을 바꿨을 때
+
+`update` 는 내용만 다시 읽는다. 이름을 바꾸면 옛 이름으로 설치된 것이 그대로
+남고 새 이름은 설치된 적이 없어서, 저장소는 멀쩡한데 스킬 목록에는 아무것도
+안 뜬다. 지우고 다시 깐다.
+
+```bash
+claude plugin uninstall <옛이름>@claude-kit
+claude plugin marketplace update claude-kit
+claude plugin install <새이름>@claude-kit
+claude plugin details <새이름>          # commands·hooks 까지 들어갔는지 확인
+```
+
+`~/.claude/plugins/cache/claude-kit/<옛이름>` 이 남으면 직접 지운다.
+`claude plugin prune` 은 자동 설치된 의존성만 건드려서 이건 안 지운다.
 
 ## 언어 정책
 
