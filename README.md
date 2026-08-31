@@ -82,11 +82,15 @@ claude-kit/
 │           ├── templates/      charter · design · decision · journal · report
 │           └── scripts/        check-trace.sh (추적 사슬 검사)
 ├── shared/CLAUDE.md                     상시 적용되는 개인 지시사항
-└── scripts/
-    ├── link.sh        ~/.claude/CLAUDE.md 심링크
-    ├── pack.sh        dist/*.skill 생성 (계정 업로드용)
-    └── bootstrap.sh   서드파티 플러그인 복원 (새 머신/컨테이너)
+└── scripts/                          POSIX(.sh)와 Windows(.ps1) 짝으로 둔다
+    ├── link.sh       link.ps1       ~/.claude/CLAUDE.md 심링크
+    ├── pack.sh       pack.ps1       dist/*.skill 생성 (계정 업로드용)
+    └── bootstrap.sh  bootstrap.ps1  서드파티 플러그인 복원 (새 머신/컨테이너)
 ```
+
+`.sh` 와 `.ps1` 은 같은 일을 하고 같은 결과를 낸다. 어느 쪽을 돌려도 되고,
+섞어 돌려도 된다. 왜 두 벌인지는 [스크립트가 두 벌인 이유](#스크립트가-두-벌인-이유)를
+본다.
 
 ## 최초 설치
 
@@ -108,33 +112,53 @@ cd ~/claude-kit
 
 ### Windows 데스크톱 앱 (Code 탭 · Local)
 
-`C:\Users\<사용자>\.claude` 는 WSL 쪽과 완전히 별개다. 같은 저장소를 원본으로
-쓰되 **로컬 경로가 아니라 GitHub 경유로** 붙인다. Windows 에서 WSL 파일
-(`\\wsl.localhost\...`)에 접근하면 네트워크 파일시스템을 타서 느리고 파일 감시가
-깨진다는 것이 공식 문서의 설명이다. 마켓플레이스 소스로 그 경로를 줬을 때 실제로
-어떻게 되는지는 확인해보지 않았다.
+`C:\Users\<사용자>\.claude` 는 WSL 쪽과 완전히 별개다. **Python 도 Git Bash 도
+필요 없다.** Windows 에 항상 있는 PowerShell 5.1 로 끝난다.
 
-앱의 Code 탭에서 Local 세션을 열고:
+```powershell
+git clone https://github.com/jeshin119/claude-kit.git $HOME\claude-kit
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $HOME\claude-kit\scripts\bootstrap.ps1
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $HOME\claude-kit\scripts\link.ps1
+```
+
+`link.ps1` 은 심링크를 만든다. Windows 는 **개발자 모드**(설정 > 개인 정보 및 보안 >
+개발자용) 또는 관리자 권한이 있어야 심링크를 만들 수 있다. 둘 다 없으면 스크립트가
+안내를 띄우고 **실패로 끝난다.** 조용히 사본을 만들지 않는다. 사본으로 가려면
+명시한다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $HOME\claude-kit\scripts\link.ps1 -Copy
+```
+
+사본은 자동 반영되지 않는다. `shared/CLAUDE.md` 를 고칠 때마다 다시 돌려야 한다.
+내용이 같으면 아무 일도 하지 않으므로 반복 실행해도 `.bak` 이 쌓이지 않는다.
+
+마지막으로 앱의 Code 탭에서 **Local** 세션을 열고 (WSL 배포판이 아니다):
 
 ```
-/plugin marketplace add jeshin119/claude-kit
+/plugin marketplace add C:\Users\<사용자>\claude-kit
 /plugin install doc-protocols@claude-kit
 ```
 
-GitHub 경유이므로 **push 한 것까지만 반영된다.** `git push` 를 먼저 한다.
-
-`shared/CLAUDE.md` 는 `link.sh` 가 Windows 에서 안 돈다. Windows 쪽 저장소 사본을
-따로 두고 관리자 권한 `cmd` 에서 심링크를 걸거나, 그냥 복사한다.
+로컬 clone 을 소스로 쓰면 WSL 과 구조가 같아지고 `git pull` 한 번으로 플러그인과
+`CLAUDE.md` 가 함께 최신이 된다. clone 없이 GitHub 소스로 붙일 수도 있다.
 
 ```
-mklink "%USERPROFILE%\.claude\CLAUDE.md" "<저장소 경로>\shared\CLAUDE.md"
+/plugin marketplace add jeshin119/claude-kit
 ```
 
-복사하면 원본이 갈라진다. 고칠 때마다 다시 복사한다는 뜻이다.
+이쪽은 `git pull` 이 필요 없는 대신 **push 한 것까지만 반영된다.** 그리고
+`CLAUDE.md` 를 따로 가져올 방법이 없다.
 
-서드파티 3개(`humanize-korean`, `frontend-design`, `andrej-karpathy-skills`)도
-Windows 쪽에는 따로 깔아야 한다. `bootstrap.sh` 를 Git Bash 에서 돌리거나, 앱의
-플러그인 브라우저에서 마켓플레이스를 손으로 추가한다.
+WSL 파일(`\\wsl.localhost\...`)을 소스로 주지는 않는다. 네트워크 파일시스템을
+타서 느리고 파일 감시가 깨진다는 것이 공식 문서의 설명이다. 실제 동작은 확인해보지
+않았다.
 
 ### claude.ai 계정
 
@@ -144,6 +168,63 @@ Windows 쪽에는 따로 깔아야 한다. `bootstrap.sh` 를 Git Bash 에서 �
 
 `dist/*.skill` 을 데스크톱 앱 사이드바 **Customize**, 또는 claude.ai 스킬 설정에
 업로드한다. 자세한 제약은 [계정과 로컬 사이 동기화](#계정과-로컬-사이-동기화)를 본다.
+
+## 새 환경으로 이식
+
+환경마다 다른 것은 **스크립트 확장자와 심링크 권한**뿐이다. 순서는 어디서나 같다.
+
+| 환경 | 스크립트 | 미리 있어야 하는 것 |
+|---|---|---|
+| WSL · Linux · macOS | `.sh` | `bash`, `python3`, `git` |
+| Windows (PowerShell) | `.ps1` | `git` 만. PowerShell 5.1 은 Windows 기본 탑재 |
+| Docker 컨테이너 | `.sh` | `bash`, `python3`, `git`. 로그인은 별도 |
+
+세 단계다.
+
+1. **clone** — 어디에 두든 상관없다. 아래는 홈 기준이다.
+2. **`bootstrap`** — 서드파티 마켓플레이스·플러그인 등록을 복원한다. 실제 내려받기는
+   Claude Code 가 다음 기동 때 한다.
+3. **`link`** — `~/.claude/CLAUDE.md` 를 저장소로 잇는다.
+
+그다음 Claude Code 안에서 개인 플러그인을 깐다. 이 두 줄은 `link` 가 마지막에
+출력해주므로 그대로 복사하면 된다.
+
+```
+/plugin marketplace add <clone 경로>
+/plugin install doc-protocols@claude-kit
+```
+
+POSIX:
+
+```bash
+git clone https://github.com/jeshin119/claude-kit.git ~/claude-kit && ~/claude-kit/scripts/bootstrap.sh && ~/claude-kit/scripts/link.sh
+```
+
+Windows:
+
+```powershell
+git clone https://github.com/jeshin119/claude-kit.git $HOME\claude-kit; & $HOME\claude-kit\scripts\bootstrap.ps1; & $HOME\claude-kit\scripts\link.ps1
+```
+
+세 스크립트 모두 **두 번 돌려도 같은 결과**가 된다. 실패한 것 같으면 그냥 다시
+돌리면 된다.
+
+### 이식됐는지 확인
+
+```
+/plugin
+```
+
+`doc-protocols`, `andrej-karpathy-skills`, `frontend-design`, `humanize-korean`
+넷이 enabled 여야 한다. 그다음 스킬과 커맨드가 실제로 노출되는지 본다 —
+`/doc-protocols:project-doc-framework`, `/doc-init`, `/doc-log`. `CLAUDE.md` 는
+새 세션에서 지시가 먹는지로 확인한다.
+
+### 컨테이너에서 주의할 것
+
+계정 동기화(`synced/`)는 로그인 상태에서만 돈다. 로그인하지 않는 CI 컨테이너에는
+아무것도 안 내려오므로 이 저장소 경유가 유일한 길이다. 반대로 `~/.claude` 를 볼륨에
+얹지 않으면 컨테이너를 지울 때 같이 사라진다. 그래서 복원이 세 줄로 끝나야 한다.
 
 ## 계정과 로컬 사이 동기화
 
@@ -237,15 +318,18 @@ Allowed properties are: allowed-tools, compatibility, description, license, meta
 
 | 표면 | 갱신 방법 |
 |---|---|
-| Claude Code (WSL) | `/plugin marketplace update claude-kit` |
-| Windows 데스크톱 앱 (Code · Local) | `git push` 먼저. 그다음 앱에서 `/plugin marketplace update claude-kit` |
-| claude.ai 계정 | `./scripts/pack.sh <스킬명>` 후 해당 `.skill` 재업로드 |
+| 고친 그 환경 (마켓플레이스 소스가 로컬 clone) | `/plugin marketplace update claude-kit` |
+| 다른 환경 (로컬 clone 소스) | `git push` → 그쪽에서 `git pull` → `/plugin marketplace update claude-kit` |
+| 다른 환경 (GitHub 소스) | `git push` → 그쪽에서 `/plugin marketplace update claude-kit` |
+| `shared/CLAUDE.md` | 심링크면 자동. `link.ps1 -Copy` 사본이면 `link` 를 다시 돌린다 |
+| claude.ai 계정 | `pack.sh` / `pack.ps1` 로 다시 만들어 해당 `.skill` 재업로드 |
 | 이름을 바꿨을 때 | `update` 만으로는 안 된다. 아래를 본다 |
 | 다른 머신 · 백업 | `git commit && git push`. 반영 조건은 아니지만 안 하면 잃는다 |
 
-WSL 은 마켓플레이스 소스가 로컬 디렉터리라 `push` 없이도 `update` 가 먹는다.
-Windows 는 GitHub 소스라 `push` 한 것까지만 본다. 이 차이 때문에 "WSL 에서는
-되는데 데스크톱에서는 옛날 버전"이 나온다.
+기준은 하나다 — **마켓플레이스 소스가 로컬 clone 이면 그 clone 이 최신이어야 하고,
+GitHub 소스면 push 한 것까지만 본다.** 고친 환경에서는 `push` 없이 `update` 가
+먹지만 다른 환경은 그렇지 않다. 이 차이 때문에 "여기서는 되는데 저기서는 옛날
+버전"이 나온다.
 
 ### 플러그인이나 스킬 이름을 바꿨을 때
 
@@ -285,6 +369,37 @@ WSL 과 Windows 데스크톱 앱은 캐시가 각각이므로 **양쪽에서 따
 서드파티까지 묶는 "통합 등록소"로도 만들지 않는다. 상류가 새 플러그인을 추가해도
 이 목록에 손으로 적기 전까지 보이지 않고, 이 저장소의 JSON 하나가 깨지면 개인
 스킬까지 함께 사라지는 단일 실패점이 생긴다.
+
+## 스크립트가 두 벌인 이유
+
+`.sh` 를 Windows 에서 그냥 돌리면 될 것 같지만 안 된다. Git Bash 가 있어도 막힌다.
+실제로 확인한 것 셋이다.
+
+| 막히는 것 | 무슨 일이 생기나 |
+|---|---|
+| `python3` 없음 | `bootstrap.sh` 가 JSON 을 python3 로 다룬다. Windows 의 `python3.exe` 는 **2바이트짜리 Microsoft Store 실행 별칭 스텁**이라 Store 만 열린다 |
+| `zip` 없음 | `pack.sh` 가 zip 또는 python3 를 쓴다. Git for Windows 에는 `unzip.exe` 만 있고 `zip.exe` 가 없다 |
+| `ln -s` 가 복사 | Git Bash 기본값이 심링크가 아니라 사본이다. **성공한 것처럼 보이면서** 원본과 갈라진다 |
+
+셋째가 제일 나쁘다. 사본 갈라짐을 막는 것이 이 저장소의 존재 이유인데 에러도 안 나고
+그 반대가 된다. 그래서 `link.ps1` 은 심링크를 못 만들면 실패로 끝내고, 사본은
+`-Copy` 로 명시할 때만 만든다.
+
+Python 을 설치하면 `.sh` 도 돌겠지만, 그러면 새 Windows 환경마다 사전 준비가 붙는다.
+PowerShell 5.1 은 Windows 에 항상 있고 JSON·zip·심링크가 전부 내장이라 의존이 0 이다.
+
+두 벌이 갈라지지 않게 맞춘 것:
+
+- `.ps1` 은 **UTF-8 BOM** 으로 저장한다. PowerShell 5.1 은 BOM 없는 `.ps1` 을 ANSI
+  코드페이지로 읽어서 한글이 깨진다.
+- `settings.json` 은 BOM **없이** 쓴다. `ConvertTo-Json` 은 `-Depth 100` 을 준다.
+  기본값이 2 라서 중첩이 깊으면 조용히 잘린다.
+- `pack.ps1` 은 `Compress-Archive` 를 쓰지 않는다. 항목 경로를 역슬래시로 넣는데
+  ZIP 규격은 슬래시다. `.NET ZipArchive` 로 직접 써서 `.sh` 판과 항목 목록·내용이
+  바이트 단위로 같음을 확인했다.
+
+JSON 들여쓰기 모양만 다르다. `bootstrap.ps1` 은 PowerShell 5.1 의 정렬 스타일로
+쓴다. 의미는 같고, Claude Code 가 어차피 다시 쓴다.
 
 ## 스킬 목록
 
