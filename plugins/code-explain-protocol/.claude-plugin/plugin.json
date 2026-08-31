@@ -1,0 +1,11 @@
+{
+  "name": "code-explain-protocol",
+  "displayName": "Code Explain Protocol",
+  "description": "코드·시스템 설명을 구조 → 퀴즈 → 미니 실험 순서로 진행한다. 한국어 출력 전용.",
+  "version": "0.1.0",
+  "author": {
+    "name": "jeshin",
+    "email": "jsshin0201@gmail.com"
+  },
+  "license": "MIT"
+}

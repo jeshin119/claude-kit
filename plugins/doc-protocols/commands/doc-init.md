@@ -38,7 +38,15 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, AskUserQuestion
 
 6. **`<프로젝트 이름>`, 날짜, 프로파일 표시를 실제 값으로 채운다.**
 
-7. **검증한다.**
+7. **목차를 생성한다.**
+
+   ```bash
+   python3 <스킬 디렉터리>/scripts/gen-toc.py <대상 디렉터리>/*.md
+   ```
+
+   템플릿의 `<!-- TOC -->` 자리에 h2/h3 목차가 들어간다. 손으로 쓰지 않는다.
+
+8. **검증한다.**
 
    ```bash
    bash <스킬 디렉터리>/scripts/check-trace.sh <대상 디렉터리>

@@ -48,9 +48,10 @@ Claude 를 쓰는 표면이 여럿인데 **로컬끼리는 어느 방향으로�
 
 ### 이 저장소에 직접 걸리는 함정
 
-여기 스킬 둘은 `doc-protocols` **플러그인 안에** 들어 있다. 데스크톱 앱의 WSL
-세션은 WSL 홈을 읽으면서도 플러그인을 로드하지 않으므로, 거기서는
-`/doc-protocols:project-doc-framework` 가 뜨지 않는다. (공식 문서 기준이고 직접
+여기 스킬 둘은 플러그인 안에 들어 있다 — `doc-protocols` 에 하나,
+`code-explain-protocol` 에 하나. 데스크톱 앱의 WSL 세션은 WSL 홈을 읽으면서도
+플러그인을 로드하지 않으므로, 거기서는 `/doc-protocols:project-doc-framework` 가
+뜨지 않는다. (공식 문서 기준이고 직접
 재현해보지는 않았다.) 데스크톱에서 이 스킬을 쓰려면 Code 탭을 **Local** 환경으로
 두고 Windows 쪽에 따로 설치하거나, 개인 스킬로도 노출한다.
 
@@ -68,20 +69,21 @@ Claude Code 는 개인 스킬 위치의 심링크를 따라간다. 대신 플러
 ```
 claude-kit/
 ├── .claude-plugin/marketplace.json      마켓플레이스 정의 (이름: claude-kit)
-├── plugins/doc-protocols/
+├── plugins/doc-protocols/               문서 산출물을 만드는 쪽
 │   ├── README.md                        층·프로파일·ID·추적 사슬 개념 설명
 │   ├── .claude-plugin/plugin.json       플러그인 정의
 │   ├── commands/                        /doc-init, /doc-log
 │   ├── hooks/
 │   │   ├── hooks.json                   Stop 훅 등록
 │   │   └── journal_reminder.py          발동 조건 넷을 판단하는 본체
-│   └── skills/
-│       ├── code-explain-protocol/SKILL.md
-│       └── project-doc-framework/
-│           ├── SKILL.md
-│           ├── references/     18항목 카탈로그, 문체·구조 규칙
-│           ├── templates/      charter · design · decision · journal · report
-│           └── scripts/        check-trace.sh (추적 사슬 검사)
+│   └── skills/project-doc-framework/
+│       ├── SKILL.md
+│       ├── references/     18항목 카탈로그, 문체·구조 규칙
+│       ├── templates/      charter · design · decision · journal · report
+│       └── scripts/        check-trace.sh (추적 사슬 검사)
+├── plugins/code-explain-protocol/       설명만 하고 파일은 안 만드는 쪽
+│   ├── .claude-plugin/plugin.json
+│   └── skills/code-explain-protocol/SKILL.md
 ├── shared/CLAUDE.md                     상시 적용되는 개인 지시사항
 └── scripts/                          POSIX(.sh)와 Windows(.ps1) 짝으로 둔다
     ├── link.sh       link.ps1       ~/.claude/CLAUDE.md 심링크
@@ -109,6 +111,7 @@ cd ~/claude-kit
 ```
 /plugin marketplace add ~/claude-kit
 /plugin install doc-protocols@claude-kit
+/plugin install code-explain-protocol@claude-kit
 ```
 
 ### Windows 데스크톱 앱 (Code 탭 · Local)
@@ -145,6 +148,7 @@ powershell -ExecutionPolicy Bypass -File $HOME\claude-kit\scripts\link.ps1 -Copy
 ```
 /plugin marketplace add C:\Users\<사용자>\claude-kit
 /plugin install doc-protocols@claude-kit
+/plugin install code-explain-protocol@claude-kit
 ```
 
 로컬 clone 을 소스로 쓰면 WSL 과 구조가 같아지고 `git pull` 한 번으로 플러그인과
@@ -187,12 +191,13 @@ WSL 파일(`\\wsl.localhost\...`)을 소스로 주지는 않는다. 네트워크
    Claude Code 가 다음 기동 때 한다.
 3. **`link`** — `~/.claude/CLAUDE.md` 를 저장소로 잇는다.
 
-그다음 Claude Code 안에서 개인 플러그인을 깐다. 이 두 줄은 `link` 가 마지막에
+그다음 Claude Code 안에서 개인 플러그인을 깐다. 이 줄들은 `link` 가 마지막에
 출력해주므로 그대로 복사하면 된다.
 
 ```
 /plugin marketplace add <clone 경로>
 /plugin install doc-protocols@claude-kit
+/plugin install code-explain-protocol@claude-kit
 ```
 
 POSIX:
@@ -216,8 +221,8 @@ git clone https://github.com/jeshin119/claude-kit.git $HOME\claude-kit; & $HOME\
 /plugin
 ```
 
-`doc-protocols`, `andrej-karpathy-skills`, `frontend-design`, `humanize-korean`
-넷이 enabled 여야 한다. 그다음 스킬과 커맨드가 실제로 노출되는지 본다 —
+`doc-protocols`, `code-explain-protocol`, `andrej-karpathy-skills`,
+`frontend-design`, `humanize-korean` 다섯이 enabled 여야 한다. 그다음 스킬과 커맨드가 실제로 노출되는지 본다 —
 `/doc-protocols:project-doc-framework`, `/doc-init`, `/doc-log`. `CLAUDE.md` 는
 새 세션에서 지시가 먹는지로 확인한다.
 
@@ -282,7 +287,7 @@ CLAUDE_CODE_SYNC_SKILLS=1 claude -p "사용 가능한 스킬을 나열해라"
 그래서 계정 동기화가 열려도 이 저장소를 대체하지는 못한다. 저쪽은 **읽기 전용
 배포**다 — 버전이 없고, 되돌릴 수 없고, 서버가 끄면 같이 사라지고, 훅과 커맨드는
 아예 싣지 못한다. `bootstrap.sh` 로 서드파티 마켓플레이스 등록을 복원하고
-`doc-protocols` 를 마켓플레이스에서 따로 까는 이유가 이것이다.
+개인 플러그인 둘을 마켓플레이스에서 따로 까는 이유가 이것이다.
 
 ### 로컬 (WSL) → 계정
 
@@ -344,6 +349,9 @@ claude plugin marketplace update claude-kit
 claude plugin install <새이름>@claude-kit
 claude plugin details <새이름>          # commands·hooks 까지 들어갔는지 확인
 ```
+
+플러그인 하나를 둘로 쪼갠 경우도 같다. 남은 쪽은 이름이 그대로여도 캐시에 옛
+스킬이 남아 있으므로, 쪼갠 뒤에는 양쪽 다 지우고 다시 깐다.
 
 `~/.claude/plugins/cache/claude-kit/<옛이름>` 이 남으면 직접 지운다.
 `claude plugin prune` 은 자동 설치된 의존성만 건드려서 이건 안 지운다.
@@ -407,10 +415,14 @@ JSON 들여쓰기 모양만 다르다. `bootstrap.ps1` 은 PowerShell 5.1 의 �
 `project-doc-framework` 가 쓰는 층·프로파일·ID·추적 사슬이 무엇인지는
 [plugins/doc-protocols/README.md](plugins/doc-protocols/README.md) 에 있다.
 
-| 스킬 | 하는 일 | 발동하지 않는 경우 |
-|---|---|---|
-| `code-explain-protocol` | 코드·시스템 설명을 구조 → 퀴즈 → 미니 실험 순서로 진행해, "읽은" 상태가 아니라 "이해한" 상태에 도달시킨다 | 기능 구현, 버그 수정, 리팩토링, 코드 생성 |
-| `project-doc-framework` | 프로젝트 문서를 세우고·갱신하고·정리한다. 18개 항목을 갱신 주기가 다른 6개 층으로 나누고, 규모 프로파일(S/M/L)로 만들 파일을 정하고, 추적 사슬로 목적과 검증을 잇는다 | 코드 주석·커밋 메시지, 산문 윤문 |
+| 스킬 | 플러그인 | 하는 일 | 발동하지 않는 경우 |
+|---|---|---|---|
+| `code-explain-protocol` | `code-explain-protocol` | 코드·시스템 설명을 구조 → 퀴즈 → 미니 실험 순서로 진행해, "읽은" 상태가 아니라 "이해한" 상태에 도달시킨다 | 기능 구현, 버그 수정, 리팩토링, 코드 생성 |
+| `project-doc-framework` | `doc-protocols` | 프로젝트 문서를 세우고·갱신하고·정리한다. 18개 항목을 갱신 주기가 다른 6개 층으로 나누고, 규모 프로파일(S/M/L)로 만들 파일을 정하고, 추적 사슬로 목적과 검증을 잇는다 | 코드 주석·커밋 메시지, 산문 윤문 |
+
+스킬 하나를 플러그인 하나에 둔 것은 훅 때문이다. 훅은 플러그인 단위로 걸려서,
+`code-explain-protocol` 이 `doc-protocols` 안에 있으면 코드 설명만 쓰는 자리에도
+journal 리마인더 Stop 훅이 따라붙는다.
 
 ## 문서 커맨드와 훅
 

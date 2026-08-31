@@ -54,11 +54,14 @@ function Show-NextSteps {
     param([string]$Repo)
     $manifest = Get-Content -LiteralPath (Join-Path $Repo '.claude-plugin\marketplace.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     Write-Output ''
-    Write-Output 'Claude Code 안에서 아래 두 줄을 직접 실행해야 한다.'
+    Write-Output 'Claude Code 안에서 아래를 직접 실행해야 한다.'
     Write-Output '데스크톱 앱이면 Code 탭을 Local 환경으로 두고 실행한다.'
     Write-Output ''
     Write-Output "  /plugin marketplace add $Repo"
-    Write-Output "  /plugin install $($manifest.plugins[0].name)@$($manifest.name)"
+    # 플러그인이 여럿이다. 마켓플레이스에 있는 것을 전부 낸다.
+    foreach ($p in $manifest.plugins) {
+        Write-Output "  /plugin install $($p.name)@$($manifest.name)"
+    }
 }
 
 $done = $false

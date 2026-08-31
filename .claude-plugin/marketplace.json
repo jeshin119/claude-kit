@@ -12,14 +12,25 @@
     {
       "name": "doc-protocols",
       "source": "./plugins/doc-protocols",
-      "description": "코드 설명과 프로젝트 문서화 절차 묶음. 한국어 출력 전용.",
+      "description": "프로젝트 문서를 세우고 갱신하고 정리하는 절차. 한국어 출력 전용.",
+      "version": "0.2.0",
+      "keywords": [
+        "korean",
+        "documentation",
+        "requirements",
+        "adr"
+      ]
+    },
+    {
+      "name": "code-explain-protocol",
+      "source": "./plugins/code-explain-protocol",
+      "description": "코드·시스템 설명을 구조 → 퀴즈 → 미니 실험 순서로 진행한다. 한국어 출력 전용.",
       "version": "0.1.0",
       "keywords": [
         "korean",
         "explain",
-        "documentation",
-        "requirements",
-        "adr"
+        "onboarding",
+        "code-reading"
       ]
     }
   ]

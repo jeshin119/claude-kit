@@ -179,7 +179,6 @@ doc-protocols/
 │   ├── hooks.json         Stop 훅 등록
 │   └── journal_reminder.py  오늘 코드를 고쳤는데 journal 에 오늘 기록이 없으면 알린다
 └── skills/
-    ├── code-explain-protocol/   구조 → 퀴즈 → 미니 실험 순서로 코드를 설명한다
     └── project-doc-framework/
         ├── SKILL.md             절차와 판정 기준 (Claude 가 읽는다)
         ├── references/
@@ -192,3 +191,7 @@ doc-protocols/
 
 스킬은 요청이 `description` 과 맞을 때 발동한다. 확정적으로 돌리려면 `/doc-init`,
 `/doc-log` 를 쓴다. 설치와 동기화는 저장소 [README](../../README.md) 를 본다.
+
+코드를 설명하는 `code-explain-protocol` 은 문서 산출물을 만들지 않아서 별도
+플러그인 [`code-explain-protocol`](../code-explain-protocol/) 로 뺐다. 여기 Stop 훅은
+플러그인 단위로 걸리므로, 설명만 쓰고 싶을 때 journal 리마인더까지 따라오지 않는다.

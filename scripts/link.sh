@@ -30,13 +30,14 @@ else
   echo "심링크 생성: $DST -> $SRC"
 fi
 
-MARKET="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["name"])' "$REPO/.claude-plugin/marketplace.json")"
-PLUGIN="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["plugins"][0]["name"])' "$REPO/.claude-plugin/marketplace.json")"
+MANIFEST="$REPO/.claude-plugin/marketplace.json"
+MARKET="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["name"])' "$MANIFEST")"
 
-cat <<EOF
-
-Claude Code 안에서 아래 두 줄을 직접 실행해야 한다:
-
-  /plugin marketplace add $REPO
-  /plugin install $PLUGIN@$MARKET
-EOF
+echo
+echo "Claude Code 안에서 아래를 직접 실행해야 한다:"
+echo
+echo "  /plugin marketplace add $REPO"
+# 플러그인이 여럿이다. 마켓플레이스에 있는 것을 전부 낸다.
+python3 -c 'import json,sys
+for p in json.load(open(sys.argv[1]))["plugins"]:
+    print("  /plugin install %s@%s" % (p["name"], sys.argv[2]))' "$MANIFEST" "$MARKET"
