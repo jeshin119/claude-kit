@@ -33,8 +33,10 @@ extra() { comm -13 <(printf '%s\n' "$1" | grep -v '^$') <(printf '%s\n' "$2" | g
 def_sc=$(grep -oE '^\| *(SC-[0-9]+)' "$CHARTER" | grep -oE 'SC-[0-9]+' | sort -u)
 def_fr=$(grep -oE '^\| *(FR-[0-9]+)' "$CHARTER" | grep -oE 'FR-[0-9]+' | sort -u)
 
-use_journal=$(journal_ids 'SC-[0-9]+|FR-[0-9]+')
-use_design=$(ids "$DESIGN" 'FR-[0-9]+')
+# FR 패턴에는 반드시 \b 를 붙인다. 'NFR-03' 안에 'FR-03' 이 문자열로 들어 있어서,
+# \b 가 없으면 비기능 요구사항 언급이 기능 요구사항 구현으로 집계된다.
+use_journal=$(journal_ids 'SC-[0-9]+|\bFR-[0-9]+')
+use_design=$(ids "$DESIGN" '\bFR-[0-9]+')
 use_report=$(ids "$REPORT" 'SC-[0-9]+')
 
 fail=0
@@ -70,7 +72,7 @@ else
       "$(extra "$def_fr" "$use_design")"
   fi
   report "검증 기록이 없는 요구사항 (journal.md 14):" \
-    "$(only "$def_fr" "$(printf '%s\n' "$use_journal" | grep -oE 'FR-[0-9]+' | sort -u)")"
+    "$(only "$def_fr" "$(printf '%s\n' "$use_journal" | grep -oE '\bFR-[0-9]+' | sort -u)")"
 fi
 
 # 프로파일은 파일 존재로 판정한다. charter 헤더를 파싱하지 않는 이유는
