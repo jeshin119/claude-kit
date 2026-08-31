@@ -69,6 +69,7 @@ Claude Code 는 개인 스킬 위치의 심링크를 따라간다. 대신 플러
 claude-kit/
 ├── .claude-plugin/marketplace.json      마켓플레이스 정의 (이름: claude-kit)
 ├── plugins/doc-protocols/
+│   ├── README.md                        층·프로파일·ID·추적 사슬 개념 설명
 │   ├── .claude-plugin/plugin.json       플러그인 정의
 │   ├── commands/                        /doc-init, /doc-log
 │   ├── hooks/
@@ -402,6 +403,9 @@ JSON 들여쓰기 모양만 다르다. `bootstrap.ps1` 은 PowerShell 5.1 의 �
 쓴다. 의미는 같고, Claude Code 가 어차피 다시 쓴다.
 
 ## 스킬 목록
+
+`project-doc-framework` 가 쓰는 층·프로파일·ID·추적 사슬이 무엇인지는
+[plugins/doc-protocols/README.md](plugins/doc-protocols/README.md) 에 있다.
 
 | 스킬 | 하는 일 | 발동하지 않는 경우 |
 |---|---|---|
