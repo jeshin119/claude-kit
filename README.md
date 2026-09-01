@@ -78,7 +78,7 @@ claude-kit/
 │   │   └── journal_reminder.py          발동 조건 넷을 판단하는 본체
 │   └── skills/project-doc-framework/
 │       ├── SKILL.md
-│       ├── references/     18항목 카탈로그, 문체·구조 규칙
+│       ├── references/     19항목 카탈로그, 문체·구조 규칙
 │       ├── templates/      charter · design · decision · journal · report
 │       └── scripts/        check-trace.sh (추적 사슬 검사)
 ├── plugins/code-explain-protocol/       설명만 하고 파일은 안 만드는 쪽
@@ -418,7 +418,7 @@ JSON 들여쓰기 모양만 다르다. `bootstrap.ps1` 은 PowerShell 5.1 의 �
 | 스킬 | 플러그인 | 하는 일 | 발동하지 않는 경우 |
 |---|---|---|---|
 | `code-explain-protocol` | `code-explain-protocol` | 코드·시스템 설명을 구조 → 퀴즈 → 미니 실험 순서로 진행해, "읽은" 상태가 아니라 "이해한" 상태에 도달시킨다 | 기능 구현, 버그 수정, 리팩토링, 코드 생성 |
-| `project-doc-framework` | `doc-protocols` | 프로젝트 문서를 세우고·갱신하고·정리한다. 18개 항목을 갱신 주기가 다른 6개 층으로 나누고, 규모 프로파일(S/M/L)로 만들 파일을 정하고, 추적 사슬로 목적과 검증을 잇는다 | 코드 주석·커밋 메시지, 산문 윤문 |
+| `project-doc-framework` | `doc-protocols` | 프로젝트 문서를 세우고·갱신하고·정리한다. 19개 항목을 갱신 주기가 다른 6개 층으로 나누고, 규모 프로파일(S/M/L)로 만들 파일을 정하고, 추적 사슬로 목적과 검증을 잇는다 | 코드 주석·커밋 메시지, 산문 윤문 |
 
 스킬 하나를 플러그인 하나에 둔 것은 훅 때문이다. 훅은 플러그인 단위로 걸려서,
 `code-explain-protocol` 이 `doc-protocols` 안에 있으면 코드 설명만 쓰는 자리에도

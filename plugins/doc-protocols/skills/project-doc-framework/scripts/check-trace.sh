@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # 추적 사슬 검사. 인자로 문서 디렉터리를 받는다 (기본값: docs).
 #
-#   사슬 A: charter.md 5 성공 기준 (SC-nn) -> journal.md 14 검증 -> report.md 16 판정
-#   사슬 B: charter.md 6 기능 요구사항 (FR-nn) -> design.md 11 구현 -> journal.md 14 검증
+#   사슬 A: charter.md 6 성공 기준 (SC-nn) -> journal.md 15 검증 -> report.md 17 판정
+#   사슬 B: charter.md 7 기능 요구사항 (FR-nn) -> design.md 12 구현 -> journal.md 15 검증
 #
 # 끊긴 곳을 출력하고, 하나라도 있으면 1로 끝난다.
 # 없는 파일은 건너뛴다. 프로파일 S 에는 design.md 와 report.md 가 없다.
@@ -52,10 +52,10 @@ if [ -z "$def_sc" ]; then
   echo "  경고: charter.md 에 SC ID 가 하나도 없다. 성공 기준이 판정 불가 문장일 수 있다."
   fail=1
 else
-  report "검증 기록이 없는 성공 기준 (journal.md 14):" \
+  report "검증 기록이 없는 성공 기준 (journal.md 15):" \
     "$(only "$def_sc" "$(printf '%s\n' "$use_journal" | grep -oE 'SC-[0-9]+' | sort -u)")"
   if [ -f "$REPORT" ]; then
-    report "판정이 없는 성공 기준 (report.md 16):" \
+    report "판정이 없는 성공 기준 (report.md 17):" \
       "$(only "$def_sc" "$use_report")"
   fi
 fi
@@ -66,12 +66,12 @@ if [ -z "$def_fr" ]; then
   fail=1
 else
   if [ -f "$DESIGN" ]; then
-    report "구현 기록이 없는 요구사항 (design.md 11):" \
+    report "구현 기록이 없는 요구사항 (design.md 12):" \
       "$(only "$def_fr" "$use_design")"
     report "charter 에 없는데 design 이 참조하는 FR:" \
       "$(extra "$def_fr" "$use_design")"
   fi
-  report "검증 기록이 없는 요구사항 (journal.md 14):" \
+  report "검증 기록이 없는 요구사항 (journal.md 15):" \
     "$(only "$def_fr" "$(printf '%s\n' "$use_journal" | grep -oE '\bFR-[0-9]+' | sort -u)")"
 fi
 
