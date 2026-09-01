@@ -122,15 +122,14 @@
 
 ## 6. 검증
 
-문서를 손댄 뒤 두 가지를 돌린다.
+문서를 손댄 뒤 사슬 검사를 돌린다.
 
 ```bash
-# 사슬 검사
 bash <플러그인 경로>/skills/project-doc-framework/scripts/check-trace.sh docs/
-
-# 문체 검사. 출력이 없어야 한다
-grep -nE '거든요|해요|이에요|예요|^그래서 |^하지만 |귀찮|어렵|죽는다|무방비' docs/*.md
 ```
+
+문체는 기계로 검사하지 않는다. 규칙과 판정 기준은
+[`references/writing-rules.md`](skills/project-doc-framework/references/writing-rules.md) 에 있다.
 
 **종료 코드 1 은 실패가 아니라 끊긴 고리가 있다는 신호다.** 착수 직후에는 11 과 14 가
 비어 있으므로 1 이 정상이다. 출력은 결함 목록이 아니라 앞으로 채울 자리의 목록이다.
