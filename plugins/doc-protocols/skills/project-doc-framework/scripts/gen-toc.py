@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """<!-- TOC --> 자리에 h2/h3 목차를 생성한다. 이미 생성돼 있으면 갱신한다."""
+import os
 import re, sys
 
 MARK = "<!-- TOC -->"
@@ -35,6 +36,8 @@ def build(md):
     return '\n'.join(out)
 
 for path in sys.argv[1:]:
+    if not os.path.isfile(path):
+        print(f'skip (없음): {path}'); continue
     md = open(path, encoding='utf-8').read()
     body = re.sub(re.escape(MARK) + r'.*?' + re.escape(END), MARK, md, flags=re.S)
     if MARK not in body:

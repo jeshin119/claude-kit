@@ -33,10 +33,15 @@ def find_journal(cwd):
 
 
 def edited_today(cwd):
-    """git 추적 파일 중 오늘 mtime 인 것이 있는가."""
+    """오늘 mtime 인 작업 파일이 있는가.
+
+    추적 파일만 보면 프로젝트 초기 며칠을 통째로 놓친다. 그때는 만든 파일이
+    아직 커밋되지 않아 전부 untracked 다. --others 로 같이 본다.
+    """
     try:
         out = subprocess.run(
-            ["git", "-C", cwd, "ls-files"],
+            ["git", "-C", cwd, "ls-files", "--cached", "--others",
+             "--exclude-standard"],
             capture_output=True, text=True, timeout=10,
         )
     except (OSError, subprocess.SubprocessError):
