@@ -96,6 +96,58 @@ claude-kit/
 섞어 돌려도 된다. 왜 두 벌인지는 [스크립트가 두 벌인 이유](#스크립트가-두-벌인-이유)를
 본다.
 
+## 스크립트가 하는 일
+
+셋은 손대는 곳이 서로 다르다. 겹치지 않으니 순서만 맞으면 된다.
+
+| | 건드리는 것 | 대상 | 언제 돌리나 |
+|---|---|---|---|
+| `bootstrap` | `~/.claude/settings.json` 안의 JSON | 남의 저장소에 있는 서드파티 플러그인 | 새 머신·컨테이너에서 한 번 |
+| `link` | 파일 시스템의 심링크 | 이 저장소가 직접 가진 파일 | 새 환경에서, 그리고 링크가 깨졌을 때 |
+| `pack` | `dist/` 에 `.skill` 파일 생성 | 이 저장소의 스킬 | claude.ai 계정에 올릴 때 |
+
+**`bootstrap`** — 마켓플레이스 주소와 활성화할 플러그인 이름을 `settings.json` 에
+적어두기만 한다. 실제 내려받기는 Claude Code 가 다음 기동 때 한다. 서드파티 코드를
+이 저장소로 복사하지 않는 이유는, 각 플러그인이 원래 마켓플레이스에 남아 있어야
+업데이트를 계속 받기 때문이다.
+
+**`link`** — `shared/CLAUDE.md` 와 `bin/csess` 를 홈 아래 제자리로 잇는다. 사본이
+아니라 심링크라 원본이 저장소 한 곳뿐이고, 어느 한쪽만 고쳐져 갈라지는 일이 없다.
+
+**`pack`** — 계정에는 플러그인을 통째로 올릴 수 없어서 스킬 하나를 `.skill` 한 개로
+묶는다. 자세한 것은 [계정과 로컬 사이 동기화](#계정과-로컬-사이-동기화)를 본다.
+
+### `~/.claude/settings.json` 이 무엇인가
+
+Claude Code 가 기동할 때 읽는 사용자 전역 설정 파일이다. 모델·테마 같은 개인
+취향과, **어떤 마켓플레이스를 알고 있고 어떤 플러그인을 켤 것인가**가 여기 들어
+있다. `bootstrap` 이 고치는 것은 뒤쪽 두 키다.
+
+```jsonc
+{
+  "model": "opus",
+  "enabledPlugins": {              // 켤 플러그인. "플러그인명@마켓플레이스명"
+    "doc-protocols@claude-kit": true
+  },
+  "extraKnownMarketplaces": {      // 플러그인을 어디서 가져오는가
+    "claude-kit": { "source": { "source": "directory", "path": "/home/jeshin/claude-kit" } },
+    "im-not-ai":  { "source": { "source": "github", "repo": "epoko77-ai/im-not-ai" } }
+  }
+}
+```
+
+`source` 가 `directory` 면 그 로컬 clone 이 곧 원본이라 clone 을 최신으로 두어야
+하고, `github` 면 그쪽 저장소에서 바로 받는다. 이 저장소의 플러그인은 `link` 가
+마지막에 출력하는 `/plugin marketplace add` 로 등록하므로 `bootstrap` 이 적지
+않는다.
+
+작업 폴더별 설정은 `.claude/settings.json` 과 `.claude/settings.local.json` 으로
+따로 있다. 셋 다 읽지만 키마다 적용 범위가 달라서, 전역에서만 먹는 키가 있다.
+([계정 → 로컬](#계정--로컬-wsl--windows) 절의 `syncClaudeAiSkills` 가 그런 경우다.)
+
+`bootstrap` 은 이 파일을 고치기 전에 `.bak.<타임스탬프>` 를 먼저 남기고, 바꿀
+것이 없으면 백업도 지운다. JSON 이 이미 깨져 있으면 손대지 않고 오류로 끝난다.
+
 ## 최초 설치
 
 ### WSL (터미널 CLI)
@@ -198,7 +250,7 @@ WSL 파일(`\\wsl.localhost\...`)을 소스로 주지는 않는다. 네트워크
 1. **clone** — 어디에 두든 상관없다. 아래는 홈 기준이다.
 2. **`bootstrap`** — 서드파티 마켓플레이스·플러그인 등록을 복원한다. 실제 내려받기는
    Claude Code 가 다음 기동 때 한다.
-3. **`link`** — `~/.claude/CLAUDE.md` 를 저장소로 잇는다.
+3. **`link`** — `~/.claude/CLAUDE.md` 와 `~/.local/bin/csess` 를 저장소로 잇는다.
 
 그다음 Claude Code 안에서 개인 플러그인을 깐다. 이 줄들은 `link` 가 마지막에
 출력해주므로 그대로 복사하면 된다.
