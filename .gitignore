@@ -1,1 +1,5 @@
 dist/
+
+# 작업 중인 메모. 저장소에 넣지 않는다.
+plugins/doc-protocols/STATUS.md
+plugins/doc-protocols/ai-agent-project-strategy.md

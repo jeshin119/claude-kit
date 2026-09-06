@@ -6,6 +6,10 @@ import re, sys
 MARK = "<!-- TOC -->"
 END  = "<!-- /TOC -->"
 
+# 날짜만 있는 h3 는 목차에 넣지 않는다. journal.md 14 는 일한 날 수만큼 늘어나서,
+# 넣으면 파일 맨 위가 날짜 목록으로 채워지고 그 아래 절이 밀린다.
+DATE_H3 = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
 def slug(text):
     s = text.strip().lower()
     s = re.sub(r'`', '', s)
@@ -31,6 +35,8 @@ def build(md):
         if not m:
             continue
         depth, text = len(m.group(1)), m.group(2)
+        if depth == 3 and DATE_H3.match(text.strip()):
+            continue
         indent = '  ' * (depth - 2)
         out.append(f'{indent}- [{label(text)}](#{slug(text)})')
     return '\n'.join(out)
