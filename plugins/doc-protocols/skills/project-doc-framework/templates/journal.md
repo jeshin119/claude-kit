@@ -7,7 +7,7 @@
 
 **지난 기록**
 
-- [YYYY-MM](journal/YYYY-MM.md)
+아직 없다. 달이 바뀌면 `- [YYYY-MM](journal/YYYY-MM.md)` 형태로 여기 쌓인다.
 
 ## 14. 작업 로그
 

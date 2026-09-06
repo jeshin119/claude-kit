@@ -49,6 +49,29 @@ only() { comm -23 <(printf '%s\n' "$1" | grep -v '^$') <(printf '%s\n' "$2" | gr
 extra() { comm -13 <(printf '%s\n' "$1" | grep -v '^$') <(printf '%s\n' "$2" | grep -v '^$'); }
 inter() { comm -12 <(printf '%s\n' "$1" | grep -v '^$') <(printf '%s\n' "$2" | grep -v '^$'); }
 
+# 표에서 ID 열과 값 열을 탭으로 묶어 낸다. 열을 찾는 방식은 cell_blank 과 같다.
+cell_pairs() {  # cell_pairs <값 열 이름> <ID 열 이름>   (표준입력)
+  awk -F'|' -v want="$1" -v idname="$2" '
+    /^\|[ :|-]*-[ :|-]*$/ {
+      vcol = 0; icol = 0
+      n = split(prev, h, "|")
+      for (i = 2; i <= n; i++) {
+        t = h[i]; gsub(/^[ \t]+|[ \t]+$/, "", t)
+        if (t == want)   vcol = i
+        if (t == idname) icol = i
+      }
+      prev = $0; next
+    }
+    {
+      if (vcol > 0 && icol > 0 && $0 ~ /^\|/) {
+        v  = $vcol; gsub(/^[ \t]+|[ \t]+$/, "", v);  gsub(/[`*]/, "", v)
+        id = $icol; gsub(/^[ \t]+|[ \t]+$/, "", id); gsub(/[`*]/, "", id)
+        if (id ~ /[0-9]/) print id "\t" v
+      }
+      prev = $0
+    }'
+}
+
 # charter 에서 정의된 ID. 표 첫 열에 있는 것만 정의로 본다.
 def_sc=$(grep -oE '^\| *(SC-[0-9]+)' "$CHARTER" | pick 'SC-[0-9]+')
 def_fr=$(grep -oE '^\| *(FR-[0-9]+)' "$CHARTER" | pick 'FR-[0-9]+')
@@ -58,6 +81,9 @@ def_fr=$(grep -oE '^\| *(FR-[0-9]+)' "$CHARTER" | pick 'FR-[0-9]+')
 use_j_sc=$(section15 | pick 'SC-[0-9]+')
 use_j_fr=$(section15 | pick '\bFR-[0-9]+')
 use_design=$(section "$DESIGN" 12 | pick '\bFR-[0-9]+')
+# 12 에서 상태가 미착수인 요구사항. 표에 줄이 있다고 구현된 것은 아니다.
+todo_fr=$(section "$DESIGN" 12 | cell_pairs 상태 FR \
+          | awk -F'\t' '$2 ~ /미착수/ {print $1}' | grep -oE '\bFR-[0-9]+' | sort -u || true)
 use_report=$(section "$REPORT" 17 | pick 'SC-[0-9]+')
 
 # 표의 한 칸이 채워졌는지 본다. 열 위치는 헤더 행에서 이름으로 찾으므로 열 순서가
@@ -86,29 +112,6 @@ cell_blank() {  # cell_blank <값 열 이름> <ID 열 이름>   (표준입력)
       }
       prev = $0
     }' | sort -u
-}
-
-# 표에서 ID 열과 값 열을 탭으로 묶어 낸다. 열을 찾는 방식은 cell_blank 과 같다.
-cell_pairs() {  # cell_pairs <값 열 이름> <ID 열 이름>   (표준입력)
-  awk -F'|' -v want="$1" -v idname="$2" '
-    /^\|[ :|-]*-[ :|-]*$/ {
-      vcol = 0; icol = 0
-      n = split(prev, h, "|")
-      for (i = 2; i <= n; i++) {
-        t = h[i]; gsub(/^[ \t]+|[ \t]+$/, "", t)
-        if (t == want)   vcol = i
-        if (t == idname) icol = i
-      }
-      prev = $0; next
-    }
-    {
-      if (vcol > 0 && icol > 0 && $0 ~ /^\|/) {
-        v  = $vcol; gsub(/^[ \t]+|[ \t]+$/, "", v);  gsub(/[`*]/, "", v)
-        id = $icol; gsub(/^[ \t]+|[ \t]+$/, "", id); gsub(/[`*]/, "", id)
-        if (id ~ /[0-9]/) print id "\t" v
-      }
-      prev = $0
-    }'
 }
 
 # 15 의 방법 칸이 약한 근거뿐인데 17 에서 달성으로 판정된 성공 기준.
@@ -202,7 +205,8 @@ done_n() {  # done_n <정의 목록> <참조 목록> <미확정 ID 목록>
 }
 t_sc=$(n "$def_sc"); t_fr=$(n "$def_fr")
 v_sc=$(done_n "$def_sc" "$use_j_sc" "$(section15 | cell_blank 실측값 대상)")
-i_fr=$(done_n "$def_fr" "$use_design" "$(section "$DESIGN" 12 | cell_blank 상태 FR)")
+i_fr=$(done_n "$def_fr" "$use_design" "$(printf '%s\n%s' \
+        "$(section "$DESIGN" 12 | cell_blank 상태 FR)" "$todo_fr")")
 w_fr=$(done_n "$def_fr" "$use_j_fr" "$(section15 | cell_blank 실측값 대상)")
 if [ -f "$REPORT" ]; then
   d_sc="$(done_n "$def_sc" "$use_report" "$(section "$REPORT" 17 | cell_blank 판정 ID)")개 판정"
@@ -211,6 +215,9 @@ else
 fi
 echo "  성공 기준 ${t_sc}개 중 ${v_sc}개 검증 · ${d_sc}"
 echo "  요구사항 ${t_fr}개 중 ${i_fr}개 구현 · ${w_fr}개 검증"
+if [ -n "$todo_fr" ]; then
+  echo "  미착수 $(n "$todo_fr")개 — 착수 순서는 design.md 12 에 있다: $(printf '%s' "$todo_fr" | tr '\n' ' ')"
+fi
 
 # 미결 결정. 되돌릴 수 없는데 아직 답이 없는 것이라, 그 영역은 건드리기 전에 정해야 한다.
 open_adr=$(grep -lE '^\| *상태 *\|[^|]*미결' "$DOCS"/decisions/*.md 2>/dev/null || true)
