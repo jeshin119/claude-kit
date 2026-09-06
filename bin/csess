@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""csess - Claude Code 세션 목록 (숨겨지는 sdk-cli 세션까지 전부 보여줌)
+
+기본 정렬은 "사람이 마지막으로 입력한 시각"이다. 파일 mtime 은 세션을 다시 열거나
+관리용 줄이 덧붙기만 해도 갱신돼서 실제로 쓴 시각과 며칠씩 벌어진다.
+
+  csess              현재 폴더의 세션 목록 (최근 사용순)
+  csess -a           모든 프로젝트
+  csess -r           목록에서 번호로 골라 바로 resume
+  csess -m           예전 방식대로 파일 수정 시각순
+  csess <검색어>      제목/첫 프롬프트로 걸러서 보기
+"""
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+ROOT = os.path.expanduser(os.environ.get("CLAUDE_CONFIG_DIR", "~/.claude")) + "/projects"
+
+
+def slug(path):
+    return re.sub(r"[^a-zA-Z0-9]", "-", os.path.abspath(path))
+
+
+def epoch(ts):
+    """ISO 문자열을 epoch 초로. 못 읽으면 None."""
+    if not isinstance(ts, str):
+        return None
+    try:
+        return datetime.datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
+def blocks_of(content):
+    if isinstance(content, str):
+        return [{"type": "text", "text": content}]
+    return [b for b in (content or []) if isinstance(b, dict)]
+
+
+def human_text(d):
+    """사람이 직접 넣은 프롬프트면 그 본문을, 아니면 None.
+
+    도구 실행 결과·훅 출력·슬래시 명령 캐비엇도 type 이 user 라서 걸러내야 한다.
+    최신 기록에는 origin.kind == "human" 이 붙지만, 안 붙는 판본이 있어
+    tool_result 가 아니고 <...> 로 시작하지 않는 텍스트를 사람 입력으로 본다.
+    """
+    if d.get("isMeta"):
+        return None
+    origin = d.get("origin")
+    kind = origin.get("kind") if isinstance(origin, dict) else origin
+    if kind is not None and kind != "human":
+        return None
+    bs = blocks_of((d.get("message") or {}).get("content"))
+    if any(b.get("type") == "tool_result" for b in bs):
+        return None
+    texts = [b.get("text", "").strip() for b in bs if b.get("type") == "text"]
+    return next((t for t in texts if t and not t.startswith("<")), None)
+
+
+def scan(path):
+    """기록 파일 한 개에서 제목·첫 프롬프트·entrypoint·사용 시각을 뽑는다."""
+    info = {"title": None, "first": None, "entry": None, "branch": None, "msgs": 0,
+            "used": None, "human": 0}
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except ValueError:
+                    continue
+                t = d.get("type")
+                if t in ("custom-title", "ai-title"):
+                    info["title"] = d.get("customTitle") or d.get("aiTitle") or info["title"]
+                if info["entry"] is None and d.get("entrypoint"):
+                    info["entry"] = d["entrypoint"]
+                if d.get("gitBranch"):
+                    info["branch"] = d["gitBranch"]
+                if t in ("user", "assistant"):
+                    info["msgs"] += 1
+                if t == "user":
+                    body = human_text(d)
+                    if body is not None:
+                        info["human"] += 1
+                        info["used"] = epoch(d.get("timestamp")) or info["used"]
+                        if info["first"] is None:
+                            info["first"] = body
+    except OSError:
+        pass
+    # 이름 바꾸기(ctrl+R)로 붙인 제목은 사이드카 파일에 있다
+    side = os.path.join(path[:-6], "custom-title.json")
+    try:
+        with open(side, encoding="utf-8") as f:
+            info["title"] = json.load(f).get("customTitle") or info["title"]
+    except (OSError, ValueError):
+        pass
+    return info
+
+
+def ago(ts):
+    s = time.time() - ts
+    for n, unit in ((86400, "일"), (3600, "시간"), (60, "분")):
+        if s >= n:
+            return f"{int(s // n)}{unit} 전"
+    return "방금"
+
+
+def collect(dirs):
+    rows = []
+    for d in dirs:
+        proj = os.path.basename(d)
+        for name in os.listdir(d):
+            if not name.endswith(".jsonl"):
+                continue
+            p = os.path.join(d, name)
+            st = os.stat(p)
+            if st.st_size == 0:
+                continue
+            i = scan(p)
+            rows.append({
+                "sid": name[:-6], "proj": proj, "mtime": st.st_mtime,
+                "size": st.st_size, "used": i["used"] or st.st_mtime,
+                "guessed": i["used"] is None,
+                **{k: v for k, v in i.items() if k != "used"},
+            })
+    return rows
+
+
+def main():
+    args = sys.argv[1:]
+    show_all = "-a" in args or "--all" in args
+    pick = "-r" in args or "--resume" in args
+    by_mtime = "-m" in args or "--mtime" in args
+    query = " ".join(a for a in args if not a.startswith("-")).lower()
+
+    if not os.path.isdir(ROOT):
+        sys.exit(f"프로젝트 폴더가 없어요: {ROOT}")
+    if show_all:
+        dirs = [os.path.join(ROOT, n) for n in os.listdir(ROOT)
+                if os.path.isdir(os.path.join(ROOT, n))]
+    else:
+        d = os.path.join(ROOT, slug(os.getcwd()))
+        if not os.path.isdir(d):
+            sys.exit(f"이 폴더에는 세션이 없어요 ({d}). 전체를 보려면 csess -a")
+        dirs = [d]
+
+    rows = collect(dirs)
+    rows.sort(key=lambda r: -(r["mtime"] if by_mtime else r["used"]))
+    if query:
+        rows = [r for r in rows
+                if query in ((r["title"] or "") + (r["first"] or "")).lower()]
+    if not rows:
+        sys.exit("해당하는 세션이 없어요.")
+
+    for n, r in enumerate(rows, 1):
+        label = r["title"] or (r["first"] or "(제목 없음)").replace("\n", " ")[:60]
+        hidden = " [claude --resume 목록에서 숨겨짐]" if r["entry"] in (
+            "sdk-cli", "sdk-ts", "sdk-py") else ""
+        when = ago(r["mtime"]) if by_mtime else ago(r["used"])
+        # 파일이 나중에 건드려진 세션만 두 시각을 같이 보여준다
+        if (not by_mtime and not r["guessed"]
+                and r["mtime"] - r["used"] > 1800 and ago(r["mtime"]) != when):
+            when += f" (파일 {ago(r['mtime'])})"
+        meta = f"{when} · {r['msgs']}턴 · {r['size']//1024}KB · {r['entry'] or '?'}"
+        if show_all:
+            meta += f" · {r['proj']}"
+        print(f"{n:3}. {label}{hidden}")
+        print(f"     {meta}")
+        print(f"     {r['sid']}")
+
+    if not pick:
+        return
+    try:
+        sel = input("\n번호(엔터로 취소): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return
+    if not sel.isdigit() or not 1 <= int(sel) <= len(rows):
+        return
+    sid = rows[int(sel) - 1]["sid"]
+    print(f"claude --resume {sid}")
+    sys.exit(subprocess.call(["claude", "--resume", sid]))
+
+
+if __name__ == "__main__":
+    main()

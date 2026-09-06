@@ -85,8 +85,9 @@ claude-kit/
 │   ├── .claude-plugin/plugin.json
 │   └── skills/code-explain-protocol/SKILL.md
 ├── shared/CLAUDE.md                     상시 적용되는 개인 지시사항
+├── bin/csess                            세션 목록 CLI (최근 사용순 정렬)
 └── scripts/                          POSIX(.sh)와 Windows(.ps1) 짝으로 둔다
-    ├── link.sh       link.ps1       ~/.claude/CLAUDE.md 심링크
+    ├── link.sh       link.ps1       CLAUDE.md·csess 심링크
     ├── pack.sh       pack.ps1       dist/*.skill 생성 (계정 업로드용)
     └── bootstrap.sh  bootstrap.ps1  서드파티 플러그인 복원 (새 머신/컨테이너)
 ```
@@ -102,7 +103,7 @@ claude-kit/
 ```bash
 git clone git@github.com:jeshin119/claude-kit.git ~/claude-kit
 cd ~/claude-kit
-./scripts/link.sh          # ~/.claude/CLAUDE.md 심링크
+./scripts/link.sh          # ~/.claude/CLAUDE.md, ~/.local/bin/csess 심링크
 ./scripts/bootstrap.sh     # 서드파티 플러그인 3개 복원 (새 환경에서만)
 ```
 
@@ -113,6 +114,9 @@ cd ~/claude-kit
 /plugin install doc-protocols@claude-kit
 /plugin install code-explain-protocol@claude-kit
 ```
+
+`csess` 를 이름만으로 부르려면 `~/.local/bin` 이 PATH 에 있어야 한다. 없으면
+`link.sh` 가 알려준다. 다른 자리에 걸고 싶으면 `CLAUDE_KIT_BIN` 으로 바꾼다.
 
 ### Windows 데스크톱 앱 (Code 탭 · Local)
 
@@ -140,7 +144,12 @@ powershell -ExecutionPolicy Bypass -File $HOME\claude-kit\scripts\link.ps1
 powershell -ExecutionPolicy Bypass -File $HOME\claude-kit\scripts\link.ps1 -Copy
 ```
 
-사본은 자동 반영되지 않는다. `shared/CLAUDE.md` 를 고칠 때마다 다시 돌려야 한다.
+Windows 는 확장자 없는 `csess` 를 그대로 실행하지 못한다. `link.ps1` 이 같은
+자리에 `csess.cmd` 한 줄짜리 실행 껍데기를 만든다. 껍데기는 원본을 부르기만 해서
+심링크와 달리 갈라질 것이 없다.
+
+사본은 자동 반영되지 않는다. `shared/CLAUDE.md` 나 `bin/csess` 를 고칠 때마다
+다시 돌려야 한다.
 내용이 같으면 아무 일도 하지 않으므로 반복 실행해도 `.bak` 이 쌓이지 않는다.
 
 마지막으로 앱의 Code 탭에서 **Local** 세션을 열고 (WSL 배포판이 아니다):
@@ -328,6 +337,7 @@ Allowed properties are: allowed-tools, compatibility, description, license, meta
 | 다른 환경 (로컬 clone 소스) | `git push` → 그쪽에서 `git pull` → `/plugin marketplace update claude-kit` |
 | 다른 환경 (GitHub 소스) | `git push` → 그쪽에서 `/plugin marketplace update claude-kit` |
 | `shared/CLAUDE.md` | 심링크면 자동. `link.ps1 -Copy` 사본이면 `link` 를 다시 돌린다 |
+| `bin/csess` | 심링크면 자동. Windows 사본이면 `link` 를 다시 돌린다 |
 | claude.ai 계정 | `pack.sh` / `pack.ps1` 로 다시 만들어 해당 `.skill` 재업로드 |
 | 이름을 바꿨을 때 | `update` 만으로는 안 된다. 아래를 본다 |
 | 다른 머신 · 백업 | `git commit && git push`. 반영 조건은 아니지만 안 하면 잃는다 |
@@ -409,6 +419,40 @@ PowerShell 5.1 은 Windows 에 항상 있고 JSON·zip·심링크가 전부 내�
 
 JSON 들여쓰기 모양만 다르다. `bootstrap.ps1` 은 PowerShell 5.1 의 정렬 스타일로
 쓴다. 의미는 같고, Claude Code 가 어차피 다시 쓴다.
+
+## csess — 세션 목록
+
+`claude --resume` 은 sdk-cli 로 만들어진 세션을 목록에서 빼고, 정렬도 기록 파일의
+수정 시각을 쓴다. 그래서 며칠 전에 쓰고 만 세션이 맨 위로 올라온다. 세션을 다시
+열거나 관리용 줄이 덧붙기만 해도 파일 수정 시각이 갱신되기 때문이다.
+
+`csess` 는 숨겨지는 세션까지 다 보여주고, **사람이 마지막으로 프롬프트를 넣은
+시각** 순으로 세운다. 기록 파일에서 `origin.kind` 가 `human` 인 줄만 골라 그
+timestamp 를 쓴다. 도구 실행 결과나 `<ide_opened_file>` 같은 자동 첨부문도 `user`
+타입이라 걸러내야 한다.
+
+```bash
+csess            # 현재 폴더의 세션 (최근 사용순)
+csess -a         # 모든 프로젝트
+csess -r         # 번호로 골라 바로 resume
+csess -m         # 파일 수정 시각순 (예전 방식)
+csess 검색어      # 제목·첫 프롬프트로 거르기
+```
+
+두 시각이 30분 넘게 벌어진 세션만 `(파일 N 전)` 을 같이 낸다.
+
+```
+  3. doc-protocols 플러그인 업데이트
+     14시간 전 (파일 2시간 전) · 123턴 · 748KB · claude-vscode
+     85741005-409a-447f-9a61-a83418c427b0
+```
+
+`claude-vscode` · `claude-desktop` · `cli` 는 그 세션을 어디서 썼는지다. VS Code
+확장과 데스크톱 앱이 같은 `~/.claude/projects` 에 쓰기 때문에 한 목록에 섞여
+나온다.
+
+`origin` 필드가 없는 판본으로 만든 세션은 사람 턴을 못 찾는다. 그때만 파일 수정
+시각으로 되돌아가고, `(파일 …)` 부기는 내지 않는다.
 
 ## 스킬 목록
 
