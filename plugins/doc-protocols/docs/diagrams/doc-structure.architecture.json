@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "doc-protocols 문서 구조",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1300,
+      660
+    ],
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "frontend": {
+          "label": "진입점 (명령)"
+        },
+        "backend": {
+          "label": "확정·계약·종결 층"
+        },
+        "database": {
+          "label": "쌓기만 하는 층"
+        },
+        "cloud": {
+          "label": "덮어쓰는 층"
+        },
+        "security": {
+          "label": "검사 스크립트"
+        }
+      }
+    },
+    "views": [
+      {
+        "id": "chain-a",
+        "label": "사슬 A — 목적",
+        "focus": [
+          "def_layer",
+          "rec_layer",
+          "fin_layer"
+        ],
+        "note": "성공 기준에 실측값과 달성 판정이 붙어야 목적이다."
+      },
+      {
+        "id": "chain-b",
+        "label": "사슬 B — 범위",
+        "focus": [
+          "con_layer",
+          "cur_layer",
+          "rec_layer"
+        ],
+        "note": "요구사항과 구현을 맞춰 미구현과 범위 이탈을 드러낸다."
+      },
+      {
+        "id": "check",
+        "label": "사슬 검사",
+        "focus": [
+          "dec_layer",
+          "cur_layer",
+          "rec_layer",
+          "fin_layer",
+          "check"
+        ],
+        "note": "check-trace.sh 가 읽는 파일과 판정 대상."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "cmd_init",
+      "type": "frontend",
+      "label": "/doc-init",
+      "sublabel": "규모를 판정해 파일을 만든다",
+      "pos": [
+        70,
+        40
+      ],
+      "size": [
+        175,
+        58
+      ]
+    },
+    {
+      "id": "cmd_log",
+      "type": "frontend",
+      "label": "/doc-log",
+      "sublabel": "세션 작업과 검증값을 붙인다",
+      "pos": [
+        730,
+        40
+      ],
+      "size": [
+        175,
+        58
+      ]
+    },
+    {
+      "id": "def_layer",
+      "type": "backend",
+      "label": "정의층 · 1–6",
+      "sublabel": "초기 확정",
+      "tag": "문제 · 해결 방법 · 범위 · 성공 기준",
+      "pos": [
+        70,
+        170
+      ],
+      "size": [
+        175,
+        92
+      ]
+    },
+    {
+      "id": "con_layer",
+      "type": "backend",
+      "label": "계약층 · 7–9",
+      "sublabel": "협의해야 바꾼다",
+      "tag": "요구사항 · 인터페이스",
+      "pos": [
+        70,
+        330
+      ],
+      "size": [
+        175,
+        92
+      ]
+    },
+    {
+      "id": "dec_layer",
+      "type": "database",
+      "label": "결정층 · 10",
+      "sublabel": "append only, 지우지 않는다",
+      "tag": "decisions/NNNN-*.md",
+      "pos": [
+        70,
+        490
+      ],
+      "size": [
+        175,
+        92
+      ]
+    },
+    {
+      "id": "cur_layer",
+      "type": "cloud",
+      "label": "현행층 · 11–13",
+      "sublabel": "항상 덮어쓴다",
+      "tag": "design.md",
+      "pos": [
+        400,
+        330
+      ],
+      "size": [
+        175,
+        92
+      ]
+    },
+    {
+      "id": "rec_layer",
+      "type": "database",
+      "label": "기록층 · 14–16",
+      "sublabel": "아래로 붙인다",
+      "tag": "journal.md",
+      "pos": [
+        730,
+        240
+      ],
+      "size": [
+        175,
+        92
+      ]
+    },
+    {
+      "id": "fin_layer",
+      "type": "backend",
+      "label": "종결층 · 17–19",
+      "sublabel": "종료·보류 시 1회",
+      "tag": "report.md",
+      "pos": [
+        1060,
+        240
+      ],
+      "size": [
+        175,
+        92
+      ]
+    },
+    {
+      "id": "check",
+      "type": "security",
+      "label": "check-trace.sh",
+      "sublabel": "사슬 · ADR 참조 · 진척 · 승급",
+      "tag": "종료 코드 0 · 1 · 2 · 3 · 9",
+      "pos": [
+        400,
+        490
+      ],
+      "size": [
+        210,
+        92
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "charter.md — 두 층이 한 파일에 있다",
+      "wraps": [
+        "def_layer",
+        "con_layer"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "init-to-def",
+      "from": "cmd_init",
+      "to": "def_layer",
+      "label": "프로파일에 맞는 파일만 만든다",
+      "labelDy": 24
+    },
+    {
+      "id": "log-to-rec",
+      "from": "cmd_log",
+      "to": "rec_layer",
+      "label": "날짜 절에 이어 붙인다",
+      "labelDy": 24
+    },
+    {
+      "id": "chain-a-1",
+      "from": "def_layer",
+      "to": "rec_layer",
+      "label": "6 SC-nn → 15 실측값",
+      "variant": "emphasis"
+    },
+    {
+      "id": "chain-a-2",
+      "from": "rec_layer",
+      "to": "fin_layer",
+      "label": "15 → 17 달성 판정",
+      "variant": "emphasis"
+    },
+    {
+      "id": "chain-b-1",
+      "from": "con_layer",
+      "to": "cur_layer",
+      "label": "7 FR-nn → 12 구현 현황"
+    },
+    {
+      "id": "chain-b-2",
+      "from": "cur_layer",
+      "to": "rec_layer",
+      "label": "12 → 15 검증 기록",
+      "labelDx": -50
+    },
+    {
+      "id": "con-to-dec",
+      "from": "con_layer",
+      "to": "dec_layer",
+      "label": "바꾼 사유를 남긴다",
+      "labelDy": 24
+    },
+    {
+      "id": "dec-checked",
+      "from": "dec_layer",
+      "to": "check",
+      "label": "ADR 참조 검사",
+      "variant": "dashed"
+    },
+    {
+      "id": "cur-checked",
+      "from": "cur_layer",
+      "to": "check",
+      "label": "12 진척",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "rec-checked",
+      "from": "rec_layer",
+      "to": "check",
+      "label": "15 실측값 · 경과일",
+      "variant": "dashed",
+      "toSide": "right"
+    },
+    {
+      "id": "fin-checked",
+      "from": "fin_layer",
+      "to": "check",
+      "label": "17 판정이 있는가",
+      "variant": "dashed",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "규모 프로파일",
+      "items": [
+        "M — 며칠~몇 주. 13항목. charter · journal · design · decisions",
+        "L — 몇 달, 인수자가 있다. 19항목. + report.md",
+        "승급 신호는 남이 손댄다 / 배포 대상이 있다 / 한 달을 넘겼다",
+        "승급은 파일 추가다. 기존 파일을 다시 쓰지 않는다"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "추적 사슬",
+      "items": [
+        "사슬 A — 6 성공 기준 → 15 검증 기록 → 17 결과와 한계",
+        "한 칸이라도 비면 목적이 아니라 소망이다",
+        "사슬 B — 7 기능 요구사항 → 12 구현 현황 → 15 검증 기록",
+        "FR 만 있으면 미구현, 구현만 있으면 범위 이탈이다"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "ID 규칙",
+      "items": [
+        "SC-nn 성공 기준 · FR-nn 기능 요구사항",
+        "NFR-nn 제약과 비기능 요구사항 · ADR-nnnn 결정 기록",
+        "FR 은 기능의 유무, NFR 은 그 기능의 품질을 말한다",
+        "번호는 재사용하지 않는다. 항목을 지워도 비워 둔다"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "사슬 검사",
+      "items": [
+        "charter · design · journal · report 를 읽고 없는 파일은 건너뛴다",
+        "ID 는 해당 절 안에서만 세고, 칸이 빈 행도 끊긴 것으로 잡는다",
+        "0 이상 없음 / 1 사슬·ADR 끊김 / 2 승급 신호 / 3 둘 다 / 9 실행 오류",
+        "착수 직후의 1 은 실패가 아니라 앞으로 채울 자리의 목록이다"
+      ]
+    }
+  ]
+}

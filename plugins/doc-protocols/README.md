@@ -6,9 +6,11 @@
 같은 내용을 두 번 쓰지 않기 위해 여기에는 "왜 이런 구조인가"만 두고, 절차와 판정
 기준은 `skills/project-doc-framework/SKILL.md` 에 둔다.
 
-층과 파일과 사슬이 어떻게 이어지는지는 [`docs/doc-structure.html`](docs/doc-structure.html)
-을 브라우저로 열면 한 장으로 볼 수 있다. 2절부터 6절까지를 그린 것이고, 판단 근거는
-글 쪽에만 있다.
+층과 파일과 사슬이 어떻게 이어지는지는
+[`docs/diagrams/doc-structure.html`](docs/diagrams/doc-structure.html) 을 브라우저로 열면
+한 장으로 볼 수 있다. 2절부터 6절까지를 그린 것이고, 판단 근거는 글 쪽에만 있다.
+보기 세 개가 들어 있다 — **사슬 A(목적)**, **사슬 B(범위)**, **사슬 검사**
+(`check-trace.sh` 가 읽는 파일과 판정 대상).
 
 - [1. 무엇을 푸는가](#1-무엇을-푸는가)
   - [왜 남기는가](#왜-남기는가)
@@ -255,8 +257,9 @@ ID 는 **해당 절 안에서만** 찾는다. `journal.md` 는 15, `design.md` �
 ```
 doc-protocols/
 ├── docs/
-│   ├── doc-structure.architecture.json  그림의 원본 명세
-│   └── doc-structure.html               층 · 사슬 · 검사를 한 장으로 본다
+│   └── diagrams/
+│       ├── doc-structure.architecture.json  그림의 원본 명세. 고치는 것은 이쪽이다
+│       └── doc-structure.html               층 · 사슬 · 검사를 한 장으로 본다
 ├── commands/
 │   ├── doc-init.md        규모를 판정하고 프로파일에 맞는 파일만 만든다
 │   └── doc-log.md         이번 세션의 작업과 검증값을 journal.md 에 붙인다
@@ -278,10 +281,14 @@ doc-protocols/
 스킬은 요청이 `description` 과 맞을 때 발동한다. 확정적으로 돌리려면 `/doc-init`,
 `/doc-log` 를 쓴다. 설치와 동기화는 저장소 [README](../../README.md) 를 본다.
 
-도식이 필요하면 `archify` 스킬을 쓴다. 구성 요소가 넷을 넘거나, 한 요청이 지나는
-단계가 셋을 넘거나, 상태 전이에 조건이 붙을 때다. 산출물은 `docs/diagrams/` 에 두고
-`design.md` 11 에서 링크한다. 글 설명을 그림으로 대체하지는 않는다. 그림은 grep 에
-걸리지 않고 diff 로 읽히지 않는다.
+**도식을 고칠 때는 JSON 을 고치고 다시 그린다.** `doc-structure.architecture.json` 이
+`archify` 의 입력이고 HTML 은 산출물이다. 층이나 항목이 바뀌면 JSON 을 고쳐
+`archify` 로 다시 그린다. HTML 을 직접 손대면 다음 생성에서 지워진다.
+
+프로젝트 문서에서 도식이 필요할 때도 같은 방식이다. 구성 요소가 넷을 넘거나, 한 요청이
+지나는 단계가 셋을 넘거나, 상태 전이에 조건이 붙을 때 `archify` 로 그려 그 프로젝트의
+`docs/diagrams/` 에 두고 `design.md` 11 에서 링크한다. 글 설명을 그림으로 대체하지는
+않는다. 그림은 grep 에 걸리지 않고 diff 로 읽히지 않는다.
 
 코드를 설명하는 `code-explain-protocol` 은 문서 산출물을 만들지 않아서 별도
 플러그인 [`code-explain-protocol`](../code-explain-protocol/) 로 뺐다. 여기 Stop 훅은
