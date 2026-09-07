@@ -21,12 +21,13 @@
 set -uo pipefail
 
 DOCS="${1:-docs}"
+DOCS="${DOCS%/}"   # 끝의 / 를 떼야 출력 경로에 // 가 안 생긴다
 [ -d "$DOCS" ] || { echo "오류: $DOCS 가 없다." >&2; exit 9; }
 
 CHARTER="$DOCS/charter.md"
 DESIGN="$DOCS/design.md"
 JOURNAL="$DOCS/journal.md"
-# 롤오버된 지난 달 로그도 검증 참조 대상이다.
+# 월별 보관으로 옮긴 지난 달 로그도 검증 참조 대상이다.
 ARCHIVES=("$DOCS"/journal/*.md)
 REPORT="$DOCS/report.md"
 
@@ -38,7 +39,7 @@ section() {  # section <파일> <항목번호>
   awk -v n="$2" '$0 ~ "^## *" n "\\." {f=1;next} /^## /{f=0} f' "$1"
 }
 
-# 15 검증 기록. journal.md 와 롤오버 아카이브를 합쳐서 본다.
+# 15 검증 기록. journal.md 와 월별 보관 파일을 합쳐서 본다.
 section15() {
   section "$JOURNAL" 15
   for f in "${ARCHIVES[@]}"; do section "$f" 15; done
