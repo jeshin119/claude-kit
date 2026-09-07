@@ -385,7 +385,7 @@ Allowed properties are: allowed-tools, compatibility, description, license, meta
 
 | 표면 | 갱신 방법 |
 |---|---|
-| 고친 그 환경 (마켓플레이스 소스가 로컬 clone) | `/plugin marketplace update claude-kit` |
+| 고친 그 환경 (마켓플레이스 소스가 로컬 clone) | `/plugin marketplace update claude-kit` 뒤에 `claude plugin update doc-protocols@claude-kit` 을 돌리고 재시작한다. 2026-09-07 에 저장소는 0.4.0 인데 설치본이 8월 31일 0.2.0 에 멈춰 있었다. `plugin update` 로 올라갔고, `marketplace update` 만으로 설치본이 바뀌는지는 확인하지 않았다 |
 | 다른 환경 (로컬 clone 소스) | `git push` → 그쪽에서 `git pull` → `/plugin marketplace update claude-kit` |
 | 다른 환경 (GitHub 소스) | `git push` → 그쪽에서 `/plugin marketplace update claude-kit` |
 | `shared/CLAUDE.md` | 심링크면 자동. `link.ps1 -Copy` 사본이면 `link` 를 다시 돌린다 |
