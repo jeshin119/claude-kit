@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""Stop 훅. 오늘 코드를 고쳤는데 journal.md 에 오늘 날짜가 없으면 알린다.
+"""Stop 훅. 오늘 코드를 수정했는데 journal.md에 오늘 날짜가 없으면 알린다.
 
-발동 조건을 좁게 잡은 이유: Stop 훅이 자주 걸리면 무시하게 되고, 무시하기
+발동 조건을 좁게 잡은 이유: Stop 훅이 자주 동작하면 무시하게 되고, 무시하기
 시작하면 없는 것과 같다. 아래 넷을 전부 만족할 때만 발동한다.
 
-  1. 재발동이 아니다 (stop_hook_active 가 false)
-  2. <docs>/journal.md 가 존재한다  -- 문서를 쓰기로 한 프로젝트만 해당
-  3. journal.md 에 오늘 날짜(YYYY-MM-DD)가 없다
-  4. git 이 추적하는 파일 중 오늘 수정된 것이 있다  -- 실제로 일한 날만 해당
+  1. 재발동이 아니다 (stop_hook_active가 false)
+  2. <docs>/journal.md가 존재한다  -- 문서를 쓰기로 한 프로젝트만 해당
+  3. journal.md에 오늘 날짜(YYYY-MM-DD)가 없다
+  4. git이 추적하는 파일 중 오늘 수정된 것이 있다  -- 실제로 일한 날만 해당
 
-조건이 안 맞으면 아무것도 출력하지 않고 0 으로 끝난다.
+조건이 맞지 않으면 아무것도 출력하지 않고 0으로 끝난다.
 
-journal.md 는 docs/, doc/, 저장소 루트 순서로만 찾는다. /doc-init 에 다른
-디렉터리를 줬으면 이 훅은 그 프로젝트에서 뜨지 않는다.
+journal.md는 docs/, doc/, 저장소 루트 순서로만 찾는다. /doc-init에 다른
+디렉터리를 줬으면 이 훅은 그 프로젝트에서 동작하지 않는다.
 """
 import json
 import os
@@ -36,10 +36,10 @@ def find_journal(cwd):
 
 
 def edited_today(cwd):
-    """오늘 mtime 인 작업 파일이 있는가.
+    """오늘 수정된(mtime이 오늘인) 작업 파일이 있는지 확인한다.
 
     추적 파일만 보면 프로젝트 초기 며칠을 통째로 놓친다. 그때는 만든 파일이
-    아직 커밋되지 않아 전부 untracked 다. --others 로 같이 본다.
+    아직 커밋되지 않아 전부 untracked다. --others로 같이 본다.
     """
     try:
         out = subprocess.run(
@@ -91,10 +91,10 @@ def main():
     print(json.dumps({
         "decision": "block",
         "reason": (
-            f"오늘 코드를 고쳤는데 {rel} 에 {today_str()} 기록이 없다. "
-            "`/doc-log` 절차대로 14 작업 로그와 15 검증 기록을 붙이고, "
-            "붙일 내용이 없다고 판단되면 그 이유를 한 줄로 말하고 멈춰라. "
-            "오늘 날짜 절이 생기면 이 알림은 더 뜨지 않는다."
+            f"오늘 코드를 수정했는데 {rel}에 {today_str()} 기록이 없다. "
+            "`/doc-log` 절차대로 14 작업 로그와 15 검증 기록을 추가한다. "
+            "추가할 내용이 없다고 판단되면 그 이유를 한 줄로 말하고 멈춘다. "
+            "오늘 날짜 절이 생기면 이 알림은 다시 표시되지 않는다."
         ),
     }, ensure_ascii=False))
     return 0

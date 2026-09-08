@@ -5,15 +5,15 @@
     "email": "jsshin0201@gmail.com"
   },
   "metadata": {
-    "description": "개인 Claude Code 스킬 저장소. claude.ai 계정과 Claude Code 양쪽에 같은 스킬을 배포하는 단일 진실 원천.",
+    "description": "개인 Claude Code 스킬 저장소. claude.ai 계정과 Claude Code 양쪽에 같은 스킬을 배포하는 원본이다.",
     "version": "0.1.0"
   },
   "plugins": [
     {
       "name": "doc-protocols",
       "source": "./plugins/doc-protocols",
-      "description": "프로젝트 문서를 세우고 갱신하고 정리하는 절차. 한국어 출력 전용.",
-      "version": "0.5.1",
+      "description": "프로젝트 문서를 만들고, 갱신하고, 정리하는 절차. 출력은 한국어다.",
+      "version": "0.6.0",
       "keywords": [
         "korean",
         "documentation",
@@ -24,8 +24,8 @@
     {
       "name": "code-explain-protocol",
       "source": "./plugins/code-explain-protocol",
-      "description": "코드·시스템 설명을 구조 → 퀴즈 → 미니 실험 순서로 진행한다. 한국어 출력 전용.",
-      "version": "0.1.0",
+      "description": "코드와 시스템을 구조 설명, 퀴즈, 미니 실험 순서로 설명한다. 출력은 한국어다.",
+      "version": "0.1.1",
       "keywords": [
         "korean",
         "explain",

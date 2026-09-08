@@ -22,7 +22,7 @@ set -uo pipefail
 
 DOCS="${1:-docs}"
 DOCS="${DOCS%/}"   # 끝의 / 를 떼야 출력 경로에 // 가 안 생긴다
-[ -d "$DOCS" ] || { echo "오류: $DOCS 가 없다." >&2; exit 9; }
+[ -d "$DOCS" ] || { echo "오류: $DOCS가 없다." >&2; exit 9; }
 
 CHARTER="$DOCS/charter.md"
 DESIGN="$DOCS/design.md"
@@ -31,7 +31,7 @@ JOURNAL="$DOCS/journal.md"
 ARCHIVES=("$DOCS"/journal/*.md)
 REPORT="$DOCS/report.md"
 
-[ -f "$CHARTER" ] || { echo "오류: $CHARTER 가 없다." >&2; exit 9; }
+[ -f "$CHARTER" ] || { echo "오류: $CHARTER가 없다." >&2; exit 9; }
 
 # 파일에서 '## N.' 절 하나만 잘라낸다.
 section() {  # section <파일> <항목번호>
@@ -122,7 +122,7 @@ weak_evidence() {
   local ver_pairs weak rid verdict sc
   ver_pairs=$(section15 | cell_pairs 방법 대상)
   if [ -z "$ver_pairs" ]; then
-    echo "  참고: journal.md 15 에 방법 칸이 없다. 판정 근거의 강도는 검사하지 못한다."
+    echo "  참고: journal.md 15 검증 기록에 방법 칸이 없다. 판정 근거의 강도는 검사하지 못한다."
     return 0
   fi
   weak=""
@@ -135,7 +135,7 @@ weak_evidence() {
         || $2 == "실행" || $2 == "정적분석") { found = 1 }
       END { exit !found }' || weak="${weak}${sc}"$'\n'
   done < <(section "$REPORT" 17 | cell_pairs 판정 ID)
-  report "약한 근거만으로 달성 판정된 성공 기준 (15 방법 칸):" \
+  report "약한 근거만으로 달성 판정된 성공 기준 (15 검증 기록의 방법 칸):" \
     "$(printf '%s' "$weak" | sort -u | grep -v '^$')"
 }
 
@@ -150,7 +150,7 @@ report() {  # report <제목> <목록>
 
 echo "== 사슬 A: 성공 기준 -> 검증 -> 판정 =="
 if [ -z "$def_sc" ]; then
-  echo "  경고: charter.md 에 SC ID 가 하나도 없다. 성공 기준이 판정 불가 문장일 수 있다."
+  echo "  경고: charter.md에 SC ID가 하나도 없다. 성공 기준이 판정 불가 문장일 수 있다."
   chain=1
 else
   report "검증 기록이 없는 성공 기준 (journal.md 15):" "$(only "$def_sc" "$use_j_sc")"
@@ -166,12 +166,12 @@ fi
 
 echo "== 사슬 B: 요구사항 -> 구현 -> 검증 =="
 if [ -z "$def_fr" ]; then
-  echo "  경고: charter.md 에 FR ID 가 하나도 없다."
+  echo "  경고: charter.md에 FR ID가 하나도 없다."
   chain=1
 else
   if [ -f "$DESIGN" ]; then
     report "구현 기록이 없는 요구사항 (design.md 12):" "$(only "$def_fr" "$use_design")"
-    report "charter 에 없는데 design 이 참조하는 FR:" "$(extra "$def_fr" "$use_design")"
+    report "charter에 없는데 design이 참조하는 FR:" "$(extra "$def_fr" "$use_design")"
     report "구현 상태가 확정되지 않은 요구사항 (design.md 12):" \
       "$(section "$DESIGN" 12 | cell_blank 상태 FR)"
   fi
@@ -191,7 +191,7 @@ done
 have_adr=$(printf '%s' "$have_adr" | sort -u | grep -v '^$' || true)
 # 본문이 참조하는 결정. 템플릿의 ADR-NNNN 은 숫자가 아니라 걸리지 않는다.
 used_adr=$(grep -rhoE 'ADR-[0-9]{4}' "$DOCS" 2>/dev/null | sort -u | grep -v '^$' || true)
-report "참조된 ADR 에 해당 파일이 없다 (decisions/):" "$(only "$used_adr" "$have_adr")"
+report "참조된 ADR에 해당 파일이 없다 (decisions/):" "$(only "$used_adr" "$have_adr")"
 [ -n "$have_adr" ] || echo "  결정 기록 없음."
 # 아무도 참조하지 않는 ADR 은 잡지 않는다. 단독으로 서는 결정이 정상이다.
 
@@ -217,13 +217,13 @@ fi
 echo "  성공 기준 ${t_sc}개 중 ${v_sc}개 검증 · ${d_sc}"
 echo "  요구사항 ${t_fr}개 중 ${i_fr}개 구현 · ${w_fr}개 검증"
 if [ -n "$todo_fr" ]; then
-  echo "  미착수 $(n "$todo_fr")개 — 착수 순서는 design.md 12 에 있다: $(printf '%s' "$todo_fr" | tr '\n' ' ')"
+  echo "  미착수 $(n "$todo_fr")개. 착수 순서는 design.md 12 구현 현황에 있다: $(printf '%s' "$todo_fr" | tr '\n' ' ')"
 fi
 
 # 미결 결정. 되돌릴 수 없는데 아직 답이 없는 것이라, 그 영역은 건드리기 전에 정해야 한다.
 open_adr=$(grep -lE '^\| *상태 *\|[^|]*미결' "$DOCS"/decisions/*.md 2>/dev/null || true)
 if [ -n "$open_adr" ]; then
-  echo "  미결 결정 $(n "$open_adr")건 — 이 영역을 건드리기 전에 답을 정한다:"
+  echo "  미결 결정 $(n "$open_adr")건. 이 영역을 수정하기 전에 답을 정한다:"
   echo "$open_adr" | sed 's#^#    - #'
 fi
 
@@ -269,7 +269,7 @@ tracked_count() {
 echo "== 프로파일 승급 =="
 prof=$(profile)
 if [ -z "$prof" ]; then
-  echo "  경고: charter.md 헤더의 프로파일이 M 도 L 도 아니다. 템플릿 잔재를 지운다."
+  echo "  경고: charter.md 헤더의 프로파일이 M도 L도 아니다. 템플릿 잔재를 지운다."
   chain=1
 fi
 start=$(first_date)
@@ -284,16 +284,16 @@ echo "  현재: ${prof:-미상} (charter 헤더 기준)${start:+ · 시작 $star
 signals=""
 case "$prof" in
   M)
-    [ -n "$days" ] && [ "$days" -ge 30 ] && signals="${signals}    - ${days}일 걸렸다 (기준 한 달 초과)"$'\n'
+    [ -n "$days" ] && [ "$days" -ge 30 ] && signals="${signals}    - ${days}일 경과 (기준 한 달 초과)"$'\n'
     next=L ;;
   *) next="" ;;
 esac
 
 if [ -n "$signals" ]; then
   promote=1
-  echo "  $next 승급 조건에 걸렸다:"
+  echo "  $next 승급 조건에 해당한다:"
   printf '%s' "$signals"
-  echo "    (기계가 못 재는 신호: 결정을 뒤집었나 / 남이 손대나 / 배포 대상이 있나)"
+  echo "    (기계로 확인하지 못하는 신호: 결정을 뒤집었나 / 다른 사람이 수정하나 / 배포 대상이 있나)"
 elif [ -n "$next" ]; then
   echo "  $next 승급 신호 없음."
 fi

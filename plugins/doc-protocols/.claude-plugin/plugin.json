@@ -1,8 +1,8 @@
 {
   "name": "doc-protocols",
   "displayName": "Doc Protocols",
-  "description": "프로젝트 문서를 세우고 갱신하고 정리하는 절차. 한국어 출력 전용.",
-  "version": "0.5.1",
+  "description": "프로젝트 문서를 만들고, 갱신하고, 정리하는 절차. 출력은 한국어다.",
+  "version": "0.6.0",
   "author": {
     "name": "jeshin",
     "email": "jsshin0201@gmail.com"
