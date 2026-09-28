@@ -4,7 +4,7 @@
 #   사슬 A: charter.md 6 성공 기준 (SC-nn) -> journal.md 15 검증 -> report.md 17 판정
 #   사슬 B: charter.md 7 기능 요구사항 (FR-nn) -> design.md 12 구현 -> journal.md 15 검증
 #   ADR:   본문이 참조하는 ADR-nnnn 에 decisions/nnnn-*.md 가 있는가
-#   진척:  몇 개 중 몇 개가 채워졌는가 (재개할 때 읽는 요약)
+#   진척:  몇 개 중 몇 개가 채워졌는가, 사람이 확인할 테스트가 남았는가 (재개할 때 읽는 요약)
 #
 # ID 를 찾을 때 해당 절만 보고 파일 전체는 보지 않는다. 절을 나누지 않으면 14 작업 로그나
 # 16 변경 이력의 언급이 검증 기록으로 집계된다.
@@ -115,13 +115,43 @@ cell_blank() {  # cell_blank <값 열 이름> <ID 열 이름>   (표준입력)
     }' | sort -u
 }
 
+# 15 검증 기록의 행마다 대상, 방법, 확인 표시 유무(1 또는 0)를 탭으로 묶어 낸다.
+# 확인 표시는 실측값 칸의 '확인: <사람>, YYYY-MM-DD, 커밋 <해시 7자리 이상>'이다. 표시 끝의
+# 테스트 파일 이름은 프로젝트마다 형식이 달라 보지 않는다. 열을 찾는 방식은 cell_blank 과
+# 같고, 반복 횟수 표기({7,})를 쓰지 않는 것은 mawk 에서도 돌게 하기 위해서다.
+ver_rows() {  # (표준입력)
+  awk -F'|' '
+    /^\|[ :|-]*-[ :|-]*$/ {
+      icol = 0; mcol = 0; vcol = 0
+      n = split(prev, h, "|")
+      for (i = 2; i <= n; i++) {
+        t = h[i]; gsub(/^[ \t]+|[ \t]+$/, "", t)
+        if (t == "대상")   icol = i
+        if (t == "방법")   mcol = i
+        if (t == "실측값") vcol = i
+      }
+      prev = $0; next
+    }
+    {
+      if (icol > 0 && mcol > 0 && $0 ~ /^\|/) {
+        id = $icol; gsub(/^[ \t]+|[ \t]+$/, "", id); gsub(/[`*]/, "", id)
+        m  = $mcol; gsub(/^[ \t]+|[ \t]+$/, "", m);  gsub(/[`*]/, "", m)
+        v  = (vcol > 0) ? $vcol : ""; gsub(/[`*]/, "", v)
+        s  = (v ~ /확인: *[^,]+, *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9], *커밋 *[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]/) ? 1 : 0
+        if (id ~ /[0-9]/) print id "\t" m "\t" s
+      }
+      prev = $0
+    }'
+}
+
 # 15 의 방법 칸이 약한 근거뿐인데 17 에서 달성으로 판정된 성공 기준.
 # 에이전트가 쓴 테스트를 에이전트가 통과시킨 것(테스트(미확인))과 LLM 검토는 판정 근거가
-# 아니다. 라벨 자체가 자기 신고라, 거짓 라벨은 이 검사로 잡지 못한다.
+# 아니다. 테스트(스펙 확인)은 확인 표시가 있을 때만 센다. 확인 표시도 에이전트가 적는
+# 값이라, 사실과 다르게 적은 표시는 이 검사로 검출하지 못한다.
 weak_evidence() {
-  local ver_pairs weak rid verdict sc
-  ver_pairs=$(section15 | cell_pairs 방법 대상)
-  if [ -z "$ver_pairs" ]; then
+  local rows weak rid verdict sc
+  rows=$(section15 | ver_rows)
+  if [ -z "$rows" ]; then
     echo "  참고: journal.md 15 검증 기록에 방법 칸이 없다. 판정 근거의 강도는 검사하지 못한다."
     return 0
   fi
@@ -130,9 +160,9 @@ weak_evidence() {
     [ "$verdict" = "달성" ] || continue
     sc=$(printf '%s' "$rid" | grep -oE 'SC-[0-9]+' | head -1)
     [ -n "$sc" ] || continue
-    printf '%s\n' "$ver_pairs" | awk -F'\t' -v sc="$sc" '
-      index($1, sc) && ($2 == "타입·컴파일" || $2 == "테스트(스펙 확인)" \
-        || $2 == "실행" || $2 == "정적분석") { found = 1 }
+    printf '%s\n' "$rows" | awk -F'\t' -v sc="$sc" '
+      index($1, sc) && ($2 == "타입·컴파일" || $2 == "실행" || $2 == "정적분석" \
+        || ($2 == "테스트(스펙 확인)" && $3 == 1)) { found = 1 }
       END { exit !found }' || weak="${weak}${sc}"$'\n'
   done < <(section "$REPORT" 17 | cell_pairs 판정 ID)
   report "약한 근거만으로 달성 판정된 성공 기준 (15 검증 기록의 방법 칸):" \
@@ -156,6 +186,9 @@ else
   report "검증 기록이 없는 성공 기준 (journal.md 15):" "$(only "$def_sc" "$use_j_sc")"
   report "실측값이 비어 있는 검증 행 (journal.md 15):" \
     "$(section15 | cell_blank 실측값 대상)"
+  # 실측값이 빈 행과 같이 다룬다. 적어야 할 칸을 채우지 않은 행이다.
+  report "확인 표시가 없는 테스트(스펙 확인) 행 (journal.md 15):" \
+    "$(section15 | ver_rows | awk -F'\t' '$2 == "테스트(스펙 확인)" && $3 == 0 {print $1}' | sort -u)"
   if [ -f "$REPORT" ]; then
     report "판정이 없는 성공 기준 (report.md 17):" "$(only "$def_sc" "$use_report")"
     report "판정이 확정되지 않은 성공 기준 (report.md 17):" \
@@ -218,6 +251,21 @@ echo "  성공 기준 ${t_sc}개 중 ${v_sc}개 검증 · ${d_sc}"
 echo "  요구사항 ${t_fr}개 중 ${i_fr}개 구현 · ${w_fr}개 검증"
 if [ -n "$todo_fr" ]; then
   echo "  미착수 $(n "$todo_fr")개. 착수 순서는 design.md 12 구현 현황에 있다: $(printf '%s' "$todo_fr" | tr '\n' ' ')"
+fi
+
+# 사람 확인 대기. 약한 테스트 행(테스트(미확인), 또는 확인 표시가 없는 테스트(스펙 확인))은
+# 있는데 확인 표시가 있는 테스트(스펙 확인) 행은 없는 ID 다. 판정 근거 강도 검사는 17 에
+# 달성이 적힌 뒤에만 돌므로, 진행 중에 사람이 무엇을 확인하면 되는지는 여기서 보여 준다.
+# 알리기만 하고 종료 코드에는 넣지 않는다.
+ver_all=$(section15 | ver_rows)
+t_weak=$(printf '%s\n' "$ver_all" | awk -F'\t' '
+  $2 == "테스트(미확인)" || ($2 == "테스트(스펙 확인)" && $3 == 0) {print $1}' \
+  | pick '\b(SC|FR)-[0-9]+')
+t_ok=$(printf '%s\n' "$ver_all" | awk -F'\t' '$2 == "테스트(스펙 확인)" && $3 == 1 {print $1}' \
+  | pick '\b(SC|FR)-[0-9]+')
+wait_ids=$(only "$t_weak" "$t_ok")
+if [ -n "$wait_ids" ]; then
+  echo "  사람 확인 대기 $(n "$wait_ids")개. 테스트로 검증했지만 사람이 그 테스트를 확인한 기록이 없다: $(printf '%s' "$wait_ids" | tr '\n' ' ')"
 fi
 
 # 미결 결정. 되돌릴 수 없는데 아직 답이 없는 것이라, 그 영역은 건드리기 전에 정해야 한다.
