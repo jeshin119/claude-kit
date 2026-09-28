@@ -115,17 +115,20 @@ cell_blank() {  # cell_blank <값 열 이름> <ID 열 이름>   (표준입력)
     }' | sort -u
 }
 
-# 15 검증 기록의 행마다 대상, 방법, 확인 표시 유무(1 또는 0)를 탭으로 묶어 낸다.
-# 확인 표시는 실측값 칸의 '확인: <사람>, YYYY-MM-DD, 커밋 <해시 7자리 이상>'이다. 표시 끝의
-# 테스트 파일 이름은 프로젝트마다 형식이 달라 보지 않는다. 열을 찾는 방식은 cell_blank 과
-# 같고, 반복 횟수 표기({7,})를 쓰지 않는 것은 mawk 에서도 돌게 하기 위해서다.
+# 15 검증 기록의 행마다 날짜, 대상, 방법, 확인 표시 유무(1 또는 0), 해시, 테스트 파일
+# 이름을 탭으로 묶어 낸다. 확인 표시는 실측값 칸의
+# '확인: <사람>, YYYY-MM-DD, 커밋 <해시 7자리 이상>, <테스트 파일 이름>'이고, 파일이
+# 여럿이면 '·'로 잇는다. 빈 값은 '-'로 낸다. bash 의 read 는 탭이 연달아 오면 하나로
+# 합쳐 칸이 밀리기 때문이다. 열을 찾는 방식은 cell_blank 과 같고, 반복 횟수 표기({7,})를
+# 쓰지 않는 것은 mawk 에서도 돌게 하기 위해서다.
 ver_rows() {  # (표준입력)
   awk -F'|' '
     /^\|[ :|-]*-[ :|-]*$/ {
-      icol = 0; mcol = 0; vcol = 0
+      dcol = 0; icol = 0; mcol = 0; vcol = 0
       n = split(prev, h, "|")
       for (i = 2; i <= n; i++) {
         t = h[i]; gsub(/^[ \t]+|[ \t]+$/, "", t)
+        if (t == "날짜")   dcol = i
         if (t == "대상")   icol = i
         if (t == "방법")   mcol = i
         if (t == "실측값") vcol = i
@@ -134,36 +137,105 @@ ver_rows() {  # (표준입력)
     }
     {
       if (icol > 0 && mcol > 0 && $0 ~ /^\|/) {
+        d  = (dcol > 0) ? $dcol : ""; gsub(/^[ \t]+|[ \t]+$/, "", d)
         id = $icol; gsub(/^[ \t]+|[ \t]+$/, "", id); gsub(/[`*]/, "", id)
         m  = $mcol; gsub(/^[ \t]+|[ \t]+$/, "", m);  gsub(/[`*]/, "", m)
         v  = (vcol > 0) ? $vcol : ""; gsub(/[`*]/, "", v)
-        s  = (v ~ /확인: *[^,]+, *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9], *커밋 *[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]/) ? 1 : 0
-        if (id ~ /[0-9]/) print id "\t" m "\t" s
+        s = 0; hash = ""; files = ""
+        if (match(v, /확인: *[^,]+, *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9], *커밋 *[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*/)) {
+          s = 1
+          stamp = substr(v, RSTART, RLENGTH)
+          files = substr(v, RSTART + RLENGTH)
+          if (match(stamp, /[0-9a-f]+$/)) hash = substr(stamp, RSTART, RLENGTH)
+          sub(/^[ \t]*,[ \t]*/, "", files); sub(/[ \t.]+$/, "", files)
+        }
+        if (d == "") d = "-"
+        if (hash == "") hash = "-"
+        if (files == "") files = "-"
+        if (id ~ /[0-9]/) print d "\t" id "\t" m "\t" s "\t" hash "\t" files
       }
       prev = $0
     }'
 }
 
+# ID 마다 가장 최근의 테스트 행(테스트(미확인) 또는 테스트(스펙 확인))을 낸다. 날짜로
+# 정렬하고, 같은 날짜 안에서는 적힌 순서를 따른다. 확인한 뒤에 테스트(미확인) 행이 새로
+# 붙으면 그 행이 가장 최근 행이 되므로, 한 번 확인한 ID 도 다시 확인 대기로 올라온다.
+# 출력: ID, 방법, 확인 표시 유무, 해시, 테스트 파일 이름 (탭 구분, ID 순)
+latest_tests() {  # (표준입력: ver_rows 출력)
+  sort -s -t "$(printf '\t')" -k1,1 | awk -F'\t' '
+    $3 == "테스트(미확인)" || $3 == "테스트(스펙 확인)" {
+      rest = $2
+      while (match(rest, /(SC|FR)-[0-9]+/)) {
+        pre = (RSTART > 1) ? substr(rest, RSTART - 1, 1) : ""
+        id = substr(rest, RSTART, RLENGTH)
+        rest = substr(rest, RSTART + RLENGTH)
+        if (pre ~ /[A-Za-z]/) continue   # NFR-03 안의 FR-03 은 세지 않는다
+        last[id] = $3 "\t" $4 "\t" $5 "\t" $6
+      }
+    }
+    END { for (id in last) print id "\t" last[id] }' | sort
+}
+
+# 가장 최근 행에 확인 표시가 있는데 지금은 그 확인을 믿을 수 없는 ID 와 그 사유.
+# 표시의 커밋이 저장소에 없거나, 표시의 테스트 파일을 찾지 못하거나 같은 이름이 여럿이라
+# 특정할 수 없거나, 그 커밋 뒤에 파일이 바뀌었으면(커밋하지 않은 수정 포함) 다시 확인해야
+# 한다. 문서와 테스트가 같은 git 저장소에 있다고 가정한다. 사유 문구는 파일 이름 뒤에
+# 조사를 붙이지 않는다. 이름의 끝소리에 따라 조사가 달라지기 때문이다.
+# 출력: ID, 사유 (탭 구분)
+stale_tests() {  # (표준입력: latest_tests 출력)
+  local id m s h files f p cnt why
+  [ -n "$repo_root" ] || return 0
+  while IFS="$(printf '\t')" read -r id m s h files; do
+    [ "$m" = "테스트(스펙 확인)" ] && [ "$s" = 1 ] || continue
+    if ! git -C "$repo_root" cat-file -e "${h}^{commit}" 2>/dev/null; then
+      printf '%s\t%s\n' "$id" "저장소에 없는 커밋: $h"; continue
+    fi
+    if [ "$files" = "-" ]; then
+      printf '%s\t%s\n' "$id" "확인 표시에 테스트 파일 이름이 없다"; continue
+    fi
+    why=""
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      case "$f" in
+        */*) p=$(printf '%s\n' "$tracked" | awk -v n="$f" '$0 == n') ;;
+        *)   p=$(printf '%s\n' "$tracked" | awk -F/ -v n="$f" '$NF == n') ;;
+      esac
+      cnt=$(printf '%s' "$p" | grep -c .)
+      if [ "$cnt" -eq 0 ]; then
+        why="${why}${why:+ / }찾지 못한 파일: $f"
+      elif [ "$cnt" -gt 1 ]; then
+        why="${why}${why:+ / }같은 이름이 ${cnt}개라 특정할 수 없는 파일: $f"
+      elif ! git -C "$repo_root" diff --quiet "$h" -- "$p" 2>/dev/null; then
+        why="${why}${why:+ / }커밋 $h 뒤에 바뀐 파일: $f"
+      fi
+    done < <(printf '%s\n' "$files" | awk -F' *· *' '{ for (i = 1; i <= NF; i++) print $i }')
+    [ -z "$why" ] || printf '%s\t%s\n' "$id" "$why"
+  done
+}
+
 # 15 의 방법 칸이 약한 근거뿐인데 17 에서 달성으로 판정된 성공 기준.
 # 에이전트가 쓴 테스트를 에이전트가 통과시킨 것(테스트(미확인))과 LLM 검토는 판정 근거가
-# 아니다. 테스트(스펙 확인)은 확인 표시가 있을 때만 센다. 확인 표시도 에이전트가 적는
-# 값이라, 사실과 다르게 적은 표시는 이 검사로 검출하지 못한다.
+# 아니다. 테스트(스펙 확인)은 그 ID 의 가장 최근 테스트 행이 확인 표시를 갖고 있고 확인 뒤에
+# 바뀌지 않았을 때만 센다. 확인 표시도 에이전트가 적는 값이라, 사람이 확인하지 않았는데
+# 적은 표시는 이 검사로 검출하지 못한다.
 weak_evidence() {
-  local rows weak rid verdict sc
-  rows=$(section15 | ver_rows)
-  if [ -z "$rows" ]; then
+  local strong weak rid verdict sc
+  if [ -z "$ver_all" ]; then
     echo "  참고: journal.md 15 검증 기록에 방법 칸이 없다. 판정 근거의 강도는 검사하지 못한다."
     return 0
   fi
+  strong=$(printf '%s\n%s\n' \
+    "$(printf '%s\n' "$ver_all" \
+       | awk -F'\t' '$3 == "타입·컴파일" || $3 == "실행" || $3 == "정적분석" {print $2}' \
+       | pick '\b(SC|FR)-[0-9]+')" \
+    "$confirmed" | sort -u | grep -v '^$' || true)
   weak=""
   while IFS="$(printf '\t')" read -r rid verdict; do
     [ "$verdict" = "달성" ] || continue
     sc=$(printf '%s' "$rid" | grep -oE 'SC-[0-9]+' | head -1)
     [ -n "$sc" ] || continue
-    printf '%s\n' "$rows" | awk -F'\t' -v sc="$sc" '
-      index($1, sc) && ($2 == "타입·컴파일" || $2 == "실행" || $2 == "정적분석" \
-        || ($2 == "테스트(스펙 확인)" && $3 == 1)) { found = 1 }
-      END { exit !found }' || weak="${weak}${sc}"$'\n'
+    printf '%s\n' "$strong" | grep -qx "$sc" || weak="${weak}${sc}"$'\n'
   done < <(section "$REPORT" 17 | cell_pairs 판정 ID)
   report "약한 근거만으로 달성 판정된 성공 기준 (15 검증 기록의 방법 칸):" \
     "$(printf '%s' "$weak" | sort -u | grep -v '^$')"
@@ -178,6 +250,19 @@ report() {  # report <제목> <목록>
   echo "$2" | sed 's/^/    - /'
 }
 
+# 15 검증 기록의 테스트 상태. 사슬 A 의 판정 근거 검사와 진척의 사람 확인 대기가 같이 쓴다.
+ver_all=$(section15 | ver_rows)
+repo_root=$(git -C "$DOCS" rev-parse --show-toplevel 2>/dev/null || true)
+tracked=""
+[ -z "$repo_root" ] || tracked=$(git -C "$repo_root" ls-files 2>/dev/null || true)
+latest=$(printf '%s\n' "$ver_all" | grep -v '^$' | latest_tests)
+stale=$(printf '%s\n' "$latest" | grep -v '^$' | stale_tests)
+# 가장 최근 테스트 행에 확인 표시가 있고, 확인한 뒤에 바뀌지 않은 ID
+confirmed=$(only \
+  "$(printf '%s\n' "$latest" | awk -F'\t' '$2 == "테스트(스펙 확인)" && $3 == 1 {print $1}')" \
+  "$(printf '%s\n' "$stale" | cut -f1 | sort -u)")
+wait_ids=$(only "$(printf '%s\n' "$latest" | cut -f1)" "$confirmed")
+
 echo "== 사슬 A: 성공 기준 -> 검증 -> 판정 =="
 if [ -z "$def_sc" ]; then
   echo "  경고: charter.md에 SC ID가 하나도 없다. 성공 기준이 판정 불가 문장일 수 있다."
@@ -188,7 +273,7 @@ else
     "$(section15 | cell_blank 실측값 대상)"
   # 실측값이 빈 행과 같이 다룬다. 적어야 할 칸을 채우지 않은 행이다.
   report "확인 표시가 없는 테스트(스펙 확인) 행 (journal.md 15):" \
-    "$(section15 | ver_rows | awk -F'\t' '$2 == "테스트(스펙 확인)" && $3 == 0 {print $1}' | sort -u)"
+    "$(printf '%s\n' "$ver_all" | awk -F'\t' '$3 == "테스트(스펙 확인)" && $4 == 0 {print $2}' | sort -u)"
   if [ -f "$REPORT" ]; then
     report "판정이 없는 성공 기준 (report.md 17):" "$(only "$def_sc" "$use_report")"
     report "판정이 확정되지 않은 성공 기준 (report.md 17):" \
@@ -253,19 +338,17 @@ if [ -n "$todo_fr" ]; then
   echo "  미착수 $(n "$todo_fr")개. 착수 순서는 design.md 12 구현 현황에 있다: $(printf '%s' "$todo_fr" | tr '\n' ' ')"
 fi
 
-# 사람 확인 대기. 약한 테스트 행(테스트(미확인), 또는 확인 표시가 없는 테스트(스펙 확인))은
-# 있는데 확인 표시가 있는 테스트(스펙 확인) 행은 없는 ID 다. 판정 근거 강도 검사는 17 에
-# 달성이 적힌 뒤에만 돌므로, 진행 중에 사람이 무엇을 확인하면 되는지는 여기서 보여 준다.
-# 알리기만 하고 종료 코드에는 넣지 않는다.
-ver_all=$(section15 | ver_rows)
-t_weak=$(printf '%s\n' "$ver_all" | awk -F'\t' '
-  $2 == "테스트(미확인)" || ($2 == "테스트(스펙 확인)" && $3 == 0) {print $1}' \
-  | pick '\b(SC|FR)-[0-9]+')
-t_ok=$(printf '%s\n' "$ver_all" | awk -F'\t' '$2 == "테스트(스펙 확인)" && $3 == 1 {print $1}' \
-  | pick '\b(SC|FR)-[0-9]+')
-wait_ids=$(only "$t_weak" "$t_ok")
+# 사람 확인 대기. 가장 최근 테스트 행을 사람이 확인하지 않았거나(테스트(미확인), 또는
+# 확인 표시가 없는 테스트(스펙 확인)), 확인한 뒤에 테스트가 바뀐 ID 다. 판정 근거 강도
+# 검사는 17 에 달성이 적힌 뒤에만 돌므로, 진행 중에 사람이 무엇을 확인하면 되는지는 여기서
+# 보여 준다. 알리기만 하고 종료 코드에는 넣지 않는다.
 if [ -n "$wait_ids" ]; then
-  echo "  사람 확인 대기 $(n "$wait_ids")개. 테스트로 검증했지만 사람이 그 테스트를 확인한 기록이 없다: $(printf '%s' "$wait_ids" | tr '\n' ' ')"
+  echo "  사람 확인 대기 $(n "$wait_ids")개. 가장 최근 테스트를 사람이 확인하지 않았거나, 확인한 뒤에 테스트가 바뀌었다: $(printf '%s' "$wait_ids" | tr '\n' ' ')"
+  [ -z "$stale" ] || printf '%s\n' "$stale" | awk -F'\t' '{ print "    - " $1 ": " $2 }'
+fi
+if [ -z "$repo_root" ] \
+   && printf '%s\n' "$latest" | awk -F'\t' '$3 == 1 { f = 1 } END { exit !f }'; then
+  echo "  참고: 문서 디렉터리가 git 저장소 안에 있지 않아, 확인한 뒤에 테스트가 바뀌었는지는 검사하지 못했다."
 fi
 
 # 미결 결정. 되돌릴 수 없는데 아직 답이 없는 것이라, 그 영역은 건드리기 전에 정해야 한다.
