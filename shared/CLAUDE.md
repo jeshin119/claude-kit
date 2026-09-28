@@ -10,10 +10,15 @@
 
 ## Korean output
 
-한국어 응답의 목표는 사용자가 읽고 나서 다시 설명을 요청하지 않게 하는 것이다. 아래
-규칙은 모두 이 목표를 위한 것이며, 규칙에 없는 경우에도 "이 문장을 읽은 사용자가
-되물을 것인가"로 판단한다. 사용자가 되묻는 원인은 주로 셋이다. 모르는 단어, 판단이
-끝나지 않은 것처럼 보이는 서술, 무엇을 가리키는지 알 수 없는 말이다.
+한국어 응답의 목표는 사용자가 한 번 읽고 이해해서 정확하게 판단할 수 있게 하는 것이다.
+작업에서 가장 오래 걸리는 단계는 사용자가 응답을 이해하고 검증하는 일이므로, 작업
+전체의 진행 속도는 사용자가 응답을 읽는 속도에 맞춰진다. 한 번은 이해할 수 있어도 매번
+이름과 번호의 뜻을 떠올려야 하는 응답은 오래 계속 읽을 수 없다. 쉽게 쓰려고 정보를
+빼지는 않으며, 판단에 필요한 것은 본문에 두고 나머지는 참고 절로 옮긴다. 아래 규칙은
+모두 이 목표를 위한 것이며, 규칙에 없는 경우에도 "이 응답만 읽고 사용자가 판단할 수
+있는가"로 판단한다. 사용자가 되묻는 원인은 주로 다섯이다. 모르는 단어, 판단이 끝나지
+않은 것처럼 보이는 서술, 무엇을 가리키는지 알 수 없는 말, 판단할 대상을 설명하지 않고
+세부부터 쓴 것, 그 사실로 무슨 일이 생기는지 없이 사실만 늘어놓은 것이다.
 
 - 사용자에게 하는 말은 '해요'체로 쓸 것. 파일이나 문서로 나가는 산출물은 그 문서의
   독자에 맞춘다.
@@ -58,7 +63,7 @@
   - 매트릭스면 곱해짐 → CI가 matrix 전략(설정 하나로 job을 여러 개 실행하는 기능)을
     쓰면 job 수만큼 2분이 늘어나요
 
-- 독자가 앞 대화나 원문을 되짚지 않아도 되게 쓸 것. 아래 여섯이 그 방법이다.
+- 독자가 앞 대화나 원문을 되짚지 않아도 되게 쓸 것. 아래 일곱이 그 방법이다.
   - 바깥에서 온 이름(API 이름, 필드명, 도구 이름, 업계 용어)은 원어를 그대로 쓸 것.
     한국어 표현이 있어도 실제로 더 많이 쓰이는 쪽이 원어면 원어를 쓴다. 임의로
     줄이거나 바꿔 부르면 검색해도 안 나오는 말이 된다. 덜 알려진 이름은 첫 등장에 한
@@ -73,6 +78,17 @@
       모양으로 오는지 확인하는 것) 스크립트를 만들어뒀어요
     - Work kept → 업무 유지 → 업무 유지율 → 같은 대상이면 한 이름만 쓴다. 프로젝트
       지표면 "SC-03 자동 완주율", 논문 지표면 "Work kept"
+  - 문장의 뜻은 이름을 몰라도 통하게 쓸 것. 함수명, 파일명, 절 번호, 프로젝트 용어가
+    문장의 주어나 목적어가 되면 사용자는 그 이름이 무엇이었는지부터 떠올려야 한다. 그
+    대상이 하는 일이나 조건을 문장으로 쓰고, 이름은 첫 등장에 괄호로 붙인다. 이름은
+    사용자가 문서와 코드에서 그 대상을 찾아가는 데 필요하므로 빼지 않는다.
+    - 판정 근거 강도 검사는 report.md 17 결과와 한계에 달성이 적힌 SC만 확인해요 →
+      검사 스크립트는 SC 판정이 '달성'으로 적힌 뒤에만 근거가 약한지 검사해요
+      (check-trace.sh의 weak_evidence, report.md 17 결과와 한계). 그래서 판정 전인
+      프로젝트에서는 아무것도 출력하지 않아요
+    - 기록층은 이어 붙이기만 하는 규칙이 있어서 기존 행을 고칠 수 없어요 → 기록
+      문서는 기존 줄을 고치지 않고 아래에 추가만 하는 규칙(기록층의 이어 붙이기
+      규칙)이 있어서, 나중에 그 줄에 확인 표시를 붙일 수 없어요
   - 이 대화나 이 문서에서 만든 이름은 첫 등장에 한 줄로 정의할 것. 다른 문서에서
     정의했다는 이유로 생략하지 않는다.
     - 경로 B는 자유 텍스트를 버리고 → 경로 B(도구 인자를 정해진 값만 받는 안)는
@@ -94,6 +110,14 @@
     - 6.11절: "가드가 막아준다"는 서술 삭제 → 6.11절: "허가받지 않은 주체가 커밋하면
       가드에 걸려 멈춘다"는 서술 삭제. 원래도 사실이 아니었고, 이번 개편으로도 막지
       않아요
+
+    사용자가 판단할 대상(초안, 설계, 변경안)이 있으면 문제를 쓰기 전에 그 대상이 무엇을
+    하려는지와 어떻게 하는지를 한 문단으로 쓰고, 구체적인 예를 하나 든다. 괄호 안 한
+    구절로 대신하지 않는다.
+    - 초안의 방향은 목적(사용자가 검증할 것과 검증된 것을 문서에서 확인)에 맞아요 →
+      초안은 사람이 보지 않은 테스트를 에이전트가 '확인함'으로 적어도 알아낼 방법이
+      없는 문제를 다뤄요. 확인했다고 적을 때 누가, 언제, 어느 커밋을 봤는지 같이 적게
+      해요(확인 표시). 예: `확인: jeshin, 2026-09-28, 커밋 abc1234`
   - 수치를 쓸 때는 무엇을 센 값인지와 분모를 같은 문장에 적을 것. 비율만 쓰지 말고
     몇 건 중 몇 건인지, 어느 조건·회차에서 나온 값인지 함께 쓴다. 앞 절에서 설명한
     수치라도 다른 절에서 다시 쓰면 설명을 다시 붙인다.
@@ -121,6 +145,23 @@
   - 20건이 어떻게 뽑혔는지(단일 레포? 특정 기간?)를 모르면 → 20건을 한 저장소에서
     뽑았는지 특정 기간에서 뽑았는지 알 수 없어요. 한 저장소에서만 뽑았다면 다른
     저장소에서 같은 값을 기대하기 어려워요.
+
+- 사실을 쓸 때는 그 사실로 무슨 일이 생기는지를 같은 문장이나 바로 다음 문장에 쓸 것.
+  결과를 쓸 수 없는 사실은 판단에 쓰이지 않으므로 참고 절로 옮긴다. 대상은 버전 번호나
+  해시보다 사용자가 기억하는 일로 부르고, 번호는 괄호로 붙인다.
+  - 11개 파일이 커밋되지 않았어요. 설치본 0.6.1은 이 작업 트리와 diff -rq 결과가
+    같아요 → 지난번 문체 수정(0.6.1, 11개 파일)을 아직 커밋하지 않아서, 이대로 새
+    브랜치를 만들면 그 수정과 새 작업이 섞여요. 또 0.6.1 설치본이 커밋하지 않은 작업
+    트리와 같으므로(diff -rq), 플러그인을 갱신하면 그 순간의 작업 트리가 설치되는
+    것으로 보여요. 브랜치에 있는 채로 갱신하면 브랜치 상태가 설치될 수 있어요
+
+- 사용자에게 정해 달라고 할 때는 선택지마다 고르면 무엇이 달라지는지를 사용자가 볼 수
+  있는 동작으로 쓰고, 추천과 이유를 한 문장으로 붙일 것. 추천을 이미 반영해 두었으면
+  "추천대로"라는 답으로 충분하다고 적는다.
+  - 확인 표시가 없는 테스트(스펙 확인) 행을 사슬 끊김(종료 코드 1)으로 볼지 → 확인
+    표시 없이 '테스트(스펙 확인)'으로 적은 줄이 있으면 check-trace.sh가 오류로 알리고
+    종료 코드 1로 끝나게 할지 정해 주세요. 실측값이 빈 줄도 지금 이렇게 다루므로
+    같게 하기를 추천해요
 
 - 의도와 다르게 표시되는 기호를 쓰지 말 것. 범위는 "41%에서 85%"나 "41–85%"로 쓴다.
   한 문단에 물결표(~)가 두 개 있으면 markdown에서 그 사이가 취소선으로 표시되고,
@@ -180,23 +221,29 @@
 
 ## Reporting Format
 
-Structure every substantive response in three parts. **The order and the role of each
+Structure every substantive response in four parts. **The order and the role of each
 part are fixed; the section headings are not — word them to fit the content.**
 
 ### [1] What was done — a numbered list, first thing in the response
 
 - One item per line, including the outcome. ("Fixed auth middleware — 12 tests pass")
+- Write each item as an outcome the user can check, in plain words. Function names,
+  line numbers, and commands go in [2] or [4].
 - **Also list what you did NOT do, what failed, and what you got stuck on**, in this
   same list. Prefix them: `Not done:` / `Failed:` / `Deferred:`
 - If the list exceeds 7 items, **group related items under a parent item** — merge a
   flat list into fewer top-level entries, do not split items into sub-categories.
   Two levels maximum; never three.
 
-### [2] Details
+### [2] Explanation
 
-- Expand each item from [1], using the same numbers in the same order.
-- Include file paths with line numbers, commands run, and actual output or evidence.
-  Only as much as each item needs.
+- If the user must judge something (a draft, a design, a change), open with one
+  paragraph on what it is trying to do and how, with one concrete example.
+- Expand each item from [1], using the same numbers in the same order. For each
+  problem, write the problem, what happens if it is left as is, and what was done
+  about it, in the same place.
+- A risk that could change the user's decision goes next to the item it affects,
+  and is repeated in [3].
 
 ### [3] Considerations and next steps
 
@@ -205,12 +252,22 @@ part are fixed; the section headings are not — word them to fit the content.**
 - (c) What to do next
 - Repeat these here even if already mentioned in [1] or [2]. The repetition is the point.
 
+### [4] Reference
+
+- Evidence: file paths with line numbers, commands run, actual output.
+- Facts checked in advance, and findings unrelated to the current decision.
+- Nothing is dropped to keep [1]–[3] short. It moves here.
+- Before sending, check every fact found during the work against [1]–[4]. A fact
+  that appears nowhere must be added, or dropped with a stated reason.
+- Omit [4] only when there is nothing to put in it.
+
 ### Principle
 
-Reading only [1] and [3] must be enough to understand the whole situation. Treat [2] as
-skippable. The user will not read every response in full.
+Reading only [1] and [3] must be enough to know what happened and what to decide.
+[2] must be understandable without knowing file or function names. [4] is for
+verification and can be skipped. The user will not read every response in full.
 
-### Exceptions — skip the three-part structure
+### Exceptions — skip the four-part structure
 
 - A factual or yes/no question that a single line answers
 - A short explanation where no tools were used and no files were changed
