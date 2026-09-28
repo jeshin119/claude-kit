@@ -4,7 +4,8 @@
 #   사슬 A: charter.md 6 성공 기준 (SC-nn) -> journal.md 15 검증 -> report.md 17 판정
 #   사슬 B: charter.md 7 기능 요구사항 (FR-nn) -> design.md 12 구현 -> journal.md 15 검증
 #   ADR:   본문이 참조하는 ADR-nnnn 에 decisions/nnnn-*.md 가 있는가
-#   진척:  몇 개 중 몇 개가 채워졌는가, 사람이 확인할 테스트가 남았는가 (재개할 때 읽는 요약)
+#   진척:  몇 개 중 몇 개가 채워졌는가, 사람이 확인할 테스트가 남았는가 (재개할 때 읽는 요약),
+#          종결을 제안할 조건에 해당하는가
 #
 # ID 를 찾을 때 해당 절만 보고 파일 전체는 보지 않는다. 절을 나누지 않으면 14 작업 로그나
 # 16 변경 이력의 언급이 검증 기록으로 집계된다.
@@ -116,9 +117,11 @@ cell_blank() {  # cell_blank <값 열 이름> <ID 열 이름>   (표준입력)
 }
 
 # 15 검증 기록의 행마다 날짜, 대상, 방법, 확인 표시 유무(1 또는 0), 해시, 테스트 파일
-# 이름을 탭으로 묶어 낸다. 확인 표시는 실측값 칸의
+# 이름, 결정 표시 유무(1 또는 0), 실측값에 '측정 불가'가 있는지(1 또는 0)를 탭으로 묶어
+# 낸다. 확인 표시는 실측값 칸의
 # '확인: <사람>, YYYY-MM-DD, 커밋 <해시 7자리 이상>, <테스트 파일 이름>'이고, 파일이
-# 여럿이면 '·'로 잇는다. 빈 값은 '-'로 낸다. bash 의 read 는 탭이 연달아 오면 하나로
+# 여럿이면 '·'로 잇는다. 결정 표시는 측정 불가 행의 실측값 칸에 적는
+# '결정: <사람>, YYYY-MM-DD'다. 빈 값은 '-'로 낸다. bash 의 read 는 탭이 연달아 오면 하나로
 # 합쳐 칸이 밀리기 때문이다. 열을 찾는 방식은 cell_blank 과 같고, 반복 횟수 표기({7,})를
 # 쓰지 않는 것은 mawk 에서도 돌게 하기 위해서다.
 ver_rows() {  # (표준입력)
@@ -149,10 +152,12 @@ ver_rows() {  # (표준입력)
           if (match(stamp, /[0-9a-f]+$/)) hash = substr(stamp, RSTART, RLENGTH)
           sub(/^[ \t]*,[ \t]*/, "", files); sub(/[ \t.]+$/, "", files)
         }
+        dec = (v ~ /결정: *[^,]+, *[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/) ? 1 : 0
+        nm  = (v ~ /측정 *불가/) ? 1 : 0
         if (d == "") d = "-"
         if (hash == "") hash = "-"
         if (files == "") files = "-"
-        if (id ~ /[0-9]/) print d "\t" id "\t" m "\t" s "\t" hash "\t" files
+        if (id ~ /[0-9]/) print d "\t" id "\t" m "\t" s "\t" hash "\t" files "\t" dec "\t" nm
       }
       prev = $0
     }'
@@ -172,6 +177,24 @@ latest_tests() {  # (표준입력: ver_rows 출력)
         rest = substr(rest, RSTART + RLENGTH)
         if (pre ~ /[A-Za-z]/) continue   # NFR-03 안의 FR-03 은 세지 않는다
         last[id] = $3 "\t" $4 "\t" $5 "\t" $6
+      }
+    }
+    END { for (id in last) print id "\t" last[id] }' | sort
+}
+
+# ID 마다 가장 최근 행의 방법을 낸다. 방법과 관계없이 모든 행을 본다. 측정 불가로 적은 뒤에
+# 측정해서 새 행을 붙이면 그 행이 가장 최근 행이 되므로 측정 불가에서 빠진다.
+# 출력: ID, 방법 (탭 구분, ID 순)
+latest_methods() {  # (표준입력: ver_rows 출력)
+  sort -s -t "$(printf '\t')" -k1,1 | awk -F'\t' '
+    {
+      rest = $2
+      while (match(rest, /(SC|FR)-[0-9]+/)) {
+        pre = (RSTART > 1) ? substr(rest, RSTART - 1, 1) : ""
+        id = substr(rest, RSTART, RLENGTH)
+        rest = substr(rest, RSTART + RLENGTH)
+        if (pre ~ /[A-Za-z]/) continue   # NFR-03 안의 FR-03 은 세지 않는다
+        last[id] = $3
       }
     }
     END { for (id in last) print id "\t" last[id] }' | sort
@@ -263,6 +286,20 @@ confirmed=$(only \
   "$(printf '%s\n' "$stale" | cut -f1 | sort -u)")
 wait_ids=$(only "$(printf '%s\n' "$latest" | cut -f1)" "$confirmed")
 
+# 15 검증 기록의 측정 불가 행. 성공 기준을 이번 회차에 측정하지 않기로 사용자가 정했을 때
+# 방법 칸에 '측정 불가'를, 실측값 칸에 사유와 결정 표시를 적는다. 사슬 A, 진척, 종결 제안
+# 조건이 같이 쓴다. 결정 표시도 에이전트가 적는 값이라, 사용자가 정하지 않았는데 적은 표시는
+# 검출하지 못한다.
+# 결정 표시가 없는 측정 불가 행의 대상
+nm_nodec=$(printf '%s\n' "$ver_all" | awk -F'\t' '$3 == "측정 불가" && $7 == 0 {print $2}' | sort -u)
+# 방법은 측정 불가가 아닌데 실측값에 '측정 불가'가 적힌 행의 대상. 검출하지 않으면 실측값
+# 칸이 차 있어 측정한 값으로 세므로, 측정하지 않은 성공 기준이 사슬 A 와 종결 제안 조건을
+# 통과하고, 방법이 '실행'이면 달성 판정의 근거로도 쓰인다.
+nm_stray=$(printf '%s\n' "$ver_all" | awk -F'\t' '$3 != "측정 불가" && $8 == 1 {print $2}' | sort -u)
+# 가장 최근 행이 측정 불가인 성공 기준
+unmeas=$(printf '%s\n' "$ver_all" | grep -v '^$' | latest_methods \
+         | awk -F'\t' '$2 == "측정 불가" && $1 ~ /^SC-/ {print $1}')
+
 echo "== 사슬 A: 성공 기준 -> 검증 -> 판정 =="
 if [ -z "$def_sc" ]; then
   echo "  경고: charter.md에 SC ID가 하나도 없다. 성공 기준이 판정 불가 문장일 수 있다."
@@ -274,10 +311,16 @@ else
   # 실측값이 빈 행과 같이 다룬다. 적어야 할 칸을 채우지 않은 행이다.
   report "확인 표시가 없는 테스트(스펙 확인) 행 (journal.md 15):" \
     "$(printf '%s\n' "$ver_all" | awk -F'\t' '$3 == "테스트(스펙 확인)" && $4 == 0 {print $2}' | sort -u)"
+  report "결정 표시가 없는 측정 불가 행 (journal.md 15):" "$nm_nodec"
+  report "방법은 측정 불가가 아닌데 실측값에 측정 불가가 적힌 행 (journal.md 15):" "$nm_stray"
   if [ -f "$REPORT" ]; then
     report "판정이 없는 성공 기준 (report.md 17):" "$(only "$def_sc" "$use_report")"
     report "판정이 확정되지 않은 성공 기준 (report.md 17):" \
       "$(section "$REPORT" 17 | cell_blank 판정 ID)"
+    # 측정하지 않았으므로 해당 없음 말고는 판정할 수 없다.
+    report "15 검증 기록이 측정 불가인데 달성이나 미달로 판정한 성공 기준 (report.md 17):" \
+      "$(inter "$unmeas" "$(section "$REPORT" 17 | cell_pairs 판정 ID \
+                            | awk -F'\t' '$2 ~ /^(달성|미달)/ {print $1}' | pick 'SC-[0-9]+')")"
     weak_evidence
   fi
 fi
@@ -319,20 +362,31 @@ n() { printf '%s\n' "$1" | grep -vc '^$'; }
 echo "== 진척 =="
 # 칸까지 채워진 것만 세고, ID 가 적혀 있기만 한 것은 세지 않는다. 언급만 있고 실측값이나
 # 판정이 빈 행은 위에서 이미 끊긴 것으로 잡혔으므로 여기서도 빼야 숫자가 맞는다.
-done_n() {  # done_n <정의 목록> <참조 목록> <미확정 ID 목록>
-  n "$(only "$(inter "$1" "$2")" "$3")"
+done_ids() {  # done_ids <정의 목록> <참조 목록> <미확정 ID 목록>
+  only "$(inter "$1" "$2")" "$3"
 }
+done_n() { n "$(done_ids "$@")"; }
+# 15 에서 실측값이 비었거나, 측정 불가 행의 형식이 틀린 대상. 위 사슬 A 에서 끊긴 것으로
+# 잡혔으므로 검증으로도 측정 불가로도 세지 않는다.
+unfilled15=$(printf '%s\n%s\n' "$(section15 | cell_blank 실측값 대상)" \
+               "$(printf '%s\n%s\n' "$nm_nodec" "$nm_stray" | pick '\b(SC|FR)-[0-9]+')" \
+             | sort -u | grep -v '^$' || true)
 t_sc=$(n "$def_sc"); t_fr=$(n "$def_fr")
-v_sc=$(done_n "$def_sc" "$use_j_sc" "$(section15 | cell_blank 실측값 대상)")
+filled_sc=$(done_ids "$def_sc" "$use_j_sc" "$unfilled15")
+# 가장 최근 행이 측정 불가인 성공 기준은 검증 개수에서 빼고 따로 센다.
+unmeas_sc=$(inter "$filled_sc" "$unmeas")
+v_sc=$(n "$(only "$filled_sc" "$unmeas_sc")"); u_sc=$(n "$unmeas_sc")
 i_fr=$(done_n "$def_fr" "$use_design" "$(printf '%s\n%s' \
         "$(section "$DESIGN" 12 | cell_blank 상태 FR)" "$todo_fr")")
-w_fr=$(done_n "$def_fr" "$use_j_fr" "$(section15 | cell_blank 실측값 대상)")
+w_fr=$(done_n "$def_fr" "$use_j_fr" "$unfilled15")
 if [ -f "$REPORT" ]; then
   d_sc="$(done_n "$def_sc" "$use_report" "$(section "$REPORT" 17 | cell_blank 판정 ID)")개 판정"
 else
   d_sc="판정 없음 (report.md 없음)"
 fi
-echo "  성공 기준 ${t_sc}개 중 ${v_sc}개 검증 · ${d_sc}"
+u_part=""
+[ "$u_sc" -eq 0 ] || u_part=" · ${u_sc}개 측정 불가"
+echo "  성공 기준 ${t_sc}개 중 ${v_sc}개 검증${u_part} · ${d_sc}"
 echo "  요구사항 ${t_fr}개 중 ${i_fr}개 구현 · ${w_fr}개 검증"
 if [ -n "$todo_fr" ]; then
   echo "  미착수 $(n "$todo_fr")개. 착수 순서는 design.md 12 구현 현황에 있다: $(printf '%s' "$todo_fr" | tr '\n' ' ')"
@@ -361,6 +415,28 @@ fi
 last=$( { [ -f "$JOURNAL" ] && cat "$JOURNAL"; } 2>/dev/null \
         | grep -oE '^### [0-9]{4}-[0-9]{2}-[0-9]{2}' | grep -oE '[0-9-]{10}' | sort | tail -1)
 [ -n "$last" ] && echo "  마지막 작업 기록: $last"
+
+# 종결 제안 조건. charter 상태가 진행이고, 성공 기준마다 15 의 가장 최근 행에 실측값이
+# 있거나 그 행이 측정 불가이면 해당한다. 구현 목록이 끝났는지는 보지 않는다. 남은 요구사항은
+# 종결할 때 18 미결과 다음 단계의 다음 회차 후보로 옮긴다. 사용자가 제안에 진행 중이라고
+# 답하면 14 작업 로그에 '종결 제안: 진행 중'을 적고, 그 날짜 뒤에 성공 기준의 새 행이 생길
+# 때까지는 제안하지 않는다. 미달인 성공 기준을 개선하는 동안 갱신할 때마다 같은 제안이
+# 반복되지 않게 하려는 것이다. 알리기만 하고 종료 코드에는 넣지 않는다.
+status=$(grep -oE '^\| *상태 *\| *(진행|보류|종료) *\|' "$CHARTER" | grep -oE '진행|보류|종료' | head -1)
+if [ "$status" = "진행" ] && [ "$t_sc" -gt 0 ] && [ $(( v_sc + u_sc )) -eq "$t_sc" ]; then
+  held=$( { section "$JOURNAL" 14
+            for f in "${ARCHIVES[@]}"; do section "$f" 14; done
+          } 2>/dev/null \
+          | awk '/^### [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ { d = substr($2, 1, 10) }
+                 /종결 제안: *진행 중/ && d != "" { print d }' | sort | tail -1)
+  sc_new=$(printf '%s\n' "$ver_all" \
+           | awk -F'\t' '$2 ~ /SC-[0-9]/ && $1 != "-" { print substr($1, 1, 10) }' | sort | tail -1)
+  if [ -n "$held" ] && ! [[ "$sc_new" > "$held" ]]; then
+    echo "  종결 제안 조건에 해당하지만, ${held}에 진행 중으로 답했고 그 뒤로 성공 기준의 새 검증 행이 없어 제안하지 않는다."
+  else
+    echo "  종결 제안 조건에 해당한다. 성공 기준마다 실측값이나 측정 불가 행이 있다. 종결·보류 절차로 넘어갈지 사용자에게 묻는다."
+  fi
+fi
 
 # 프로파일은 charter 헤더의 '프로파일' 행에서 읽는다. 파일 존재로 판정하면 M 프로젝트가
 # 종료하면서 report.md 를 만든 순간 L 로 잘못 읽힌다. 헤더에 M 도 L 도 없으면 템플릿
